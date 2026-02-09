@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { PlaceholderPage } from './PlaceholderPage'
 import { useParty } from '../state/PartyContext'
 import { v4 as uuid } from 'uuid'
 
