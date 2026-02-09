@@ -10,6 +10,7 @@ import { Textarea } from '../components/ui/Textarea'
 export function InvitesPage() {
   const { state, dispatch } = useParty()
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
 
   const handleCopy = async (key: 'arrival' | 'music' | 'rooftop') => {
     const value = state.invites.messageTemplates[key]
@@ -20,6 +21,60 @@ export function InvitesPage() {
     } catch {
       setCopiedKey(null)
     }
+  }
+
+  const shareMessage = [
+    `You're invited to ${state.core.name || 'our party'}!`,
+    state.core.date ? `When: ${state.core.date}` : null,
+    state.core.location ? `Where: ${state.core.location}` : null,
+    state.invites.messageTemplates.arrival ? `Arrival: ${state.invites.messageTemplates.arrival}` : null,
+    state.music.mainLink ? `Music: ${state.music.mainLink}` : null,
+    state.invites.messageTemplates.rooftop
+      ? `Rooftop: ${state.invites.messageTemplates.rooftop}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const hostBrief = [
+    `Party: ${state.core.name || 'Untitled'}`,
+    `Theme: ${state.core.theme === 'Custom' ? state.core.customTheme || 'Custom' : state.core.theme}`,
+    `Date: ${state.core.date || 'TBD'}`,
+    `Location: ${state.core.location || 'TBD'}`,
+    `Guest count: ${state.invites.guestCount}`,
+    '',
+    'Menu:',
+    state.menu.items.length
+      ? state.menu.items.map((item) => `- ${item.name} (${item.category}, ${item.source})`).join('\n')
+      : '- None yet',
+    '',
+    'Drinks:',
+    state.drinks.suggestions.map((drink) => `- ${drink.name} (${drink.type})`).join('\n'),
+    '',
+    'Timeline:',
+    state.timeline.tasks.length
+      ? state.timeline.tasks.map((task) => `- ${task.title} (${task.offsetHours}h)`).join('\n')
+      : '- None yet',
+  ].join('\n')
+
+  const copyShareMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(shareMessage)
+      setShareCopied(true)
+      window.setTimeout(() => setShareCopied(false), 1500)
+    } catch {
+      setShareCopied(false)
+    }
+  }
+
+  const downloadBrief = () => {
+    const blob = new Blob([hostBrief], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'party-brief.txt'
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -98,6 +153,21 @@ export function InvitesPage() {
           ))}
         </div>
       </Card>
+
+      <Card>
+        <CardTitle>Share Kit</CardTitle>
+        <div className="mt-4 space-y-3 text-sm text-slate-300">
+          <Textarea value={shareMessage} rows={6} readOnly />
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={copyShareMessage}>
+              {shareCopied ? 'Copied' : 'Copy invite'}
+            </Button>
+            <Button type="button" variant="outline" onClick={downloadBrief}>
+              Download host brief
+            </Button>
+          </div>
+        </div>
+      </Card>
     </div>
   )
 }
@@ -122,18 +192,66 @@ export function MenuPage() {
       servings: draft.servings,
       notes: draft.notes.trim(),
     }
-    dispatch({
-      type: 'update_menu',
-      payload: { items: [...state.menu.items, nextItem] },
-    })
+    const nextItems = [...state.menu.items, nextItem]
+    dispatch({ type: 'update_menu', payload: { items: nextItems } })
+    syncFoodTimeline(nextItems)
     setDraft({ name: '', category: 'snacks', source: 'make', servings: 0, notes: '' })
   }
 
+  const syncFoodTimeline = (items: typeof state.menu.items) => {
+    const names = items.map((item) => item.name).filter(Boolean)
+    const title =
+      names.length === 0 ? 'Food items: add menu items' : `Food items: ${names.join(', ')}`
+    const existing = state.timeline.tasks.find((task) => task.id === 'menu-food-task')
+    const nextTask = {
+      id: 'menu-food-task',
+      title,
+      offsetHours: existing?.offsetHours ?? -24,
+      status: existing?.status ?? 'not_started',
+    }
+    const otherTasks = state.timeline.tasks.filter((task) => task.id !== 'menu-food-task')
+    dispatch({ type: 'update_timeline', payload: { tasks: [...otherTasks, nextTask] } })
+  }
+
+  const getSuggestedServings = (
+    category: typeof state.menu.items[number]['category'],
+    guestCount: number,
+  ) => {
+    const count = Math.max(guestCount, 0)
+    const multiplier =
+      category === 'mains'
+        ? 0.8
+        : category === 'snacks'
+          ? 0.5
+          : category === 'dessert'
+            ? 0.4
+            : 0.3
+    return Math.max(1, Math.ceil(count * multiplier))
+  }
+
+  const applySuggestions = () => {
+    if (state.invites.guestCount <= 0 || state.menu.items.length === 0) return
+    const nextItems = state.menu.items.map((item) =>
+      item.servings > 0
+        ? item
+        : { ...item, servings: getSuggestedServings(item.category, state.invites.guestCount) },
+    )
+    dispatch({ type: 'update_menu', payload: { items: nextItems } })
+    syncFoodTimeline(nextItems)
+  }
+
   const removeItem = (id: string) => {
-    dispatch({
-      type: 'update_menu',
-      payload: { items: state.menu.items.filter((item) => item.id !== id) },
-    })
+    const nextItems = state.menu.items.filter((item) => item.id !== id)
+    dispatch({ type: 'update_menu', payload: { items: nextItems } })
+    syncFoodTimeline(nextItems)
+  }
+
+  const updateItem = (id: string, updates: Partial<(typeof state.menu.items)[0]>) => {
+    const nextItems = state.menu.items.map((item) =>
+      item.id === id ? { ...item, ...updates } : item,
+    )
+    dispatch({ type: 'update_menu', payload: { items: nextItems } })
+    syncFoodTimeline(nextItems)
   }
 
   return (
@@ -142,6 +260,23 @@ export function MenuPage() {
       <p className="text-sm text-slate-300">
         Add items by category and source to build prep lists.
       </p>
+
+      <Card>
+        <CardTitle>Suggested servings</CardTitle>
+        <p className="mt-2 text-sm text-slate-300">
+          Based on {state.invites.guestCount || 'your'} guests. Apply suggestions to items with
+          0 servings.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+          <span>Snacks: ~0.5 per guest</span>
+          <span>Mains: ~0.8 per guest</span>
+          <span>Dessert: ~0.4 per guest</span>
+          <span>Late-night: ~0.3 per guest</span>
+        </div>
+        <Button type="button" className="mt-4" onClick={applySuggestions}>
+          Apply suggestions
+        </Button>
+      </Card>
 
       <Card>
         <CardTitle>Add menu item</CardTitle>
@@ -223,10 +358,54 @@ export function MenuPage() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
               >
                 <div>
-                  <p className="font-semibold text-white">{item.name}</p>
-                  <p className="text-xs uppercase text-slate-400">
-                    {item.category} · {item.source} · {item.servings} servings
+                  <Input
+                    value={item.name}
+                    onChange={(event) => updateItem(item.id, { name: event.target.value })}
+                    className="mb-2"
+                  />
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <Select
+                      value={item.category}
+                      onChange={(event) =>
+                        updateItem(item.id, {
+                          category: event.target.value as typeof item.category,
+                        })
+                      }
+                    >
+                      <option value="snacks">Snacks</option>
+                      <option value="mains">Mains</option>
+                      <option value="dessert">Dessert</option>
+                      <option value="late_night">Late-night</option>
+                    </Select>
+                    <Select
+                      value={item.source}
+                      onChange={(event) =>
+                        updateItem(item.id, { source: event.target.value as typeof item.source })
+                      }
+                    >
+                      <option value="make">Make</option>
+                      <option value="order">Order</option>
+                      <option value="potluck">Potluck</option>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={item.servings}
+                      onChange={(event) =>
+                        updateItem(item.id, { servings: Number(event.target.value) })
+                      }
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-400">
+                    Suggested servings:{' '}
+                    {getSuggestedServings(item.category, state.invites.guestCount)}
                   </p>
+                  <Input
+                    value={item.notes}
+                    onChange={(event) => updateItem(item.id, { notes: event.target.value })}
+                    className="mt-2"
+                    placeholder="Notes"
+                  />
                 </div>
                 <Button
                   type="button"

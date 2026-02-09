@@ -63,6 +63,7 @@ export function Dashboard() {
   const readyCount = readiness.filter((item) => item.ready).length
   const liveAlerts = Object.values(state.live.restockAlerts).filter(Boolean).length
   const liveLabel = liveAlerts === 0 ? 'Smooth sailing' : 'Restock needed'
+  const readinessPercent = Math.round((readyCount / readiness.length) * 100)
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -146,6 +147,18 @@ export function Dashboard() {
       <section className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardTitle>Readiness Badges</CardTitle>
+          <div className="mt-4 rounded-full bg-white/5 p-2">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>Overall readiness</span>
+              <span>{readinessPercent}%</span>
+            </div>
+            <div className="mt-2 h-2 w-full rounded-full bg-black/40">
+              <div
+                className="h-2 rounded-full bg-emerald-500/70"
+                style={{ width: `${readinessPercent}%` }}
+              />
+            </div>
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {readiness.map((item) => (
               <Badge key={item.label} tone={item.ready ? 'success' : 'muted'}>

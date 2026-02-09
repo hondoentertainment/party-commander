@@ -129,7 +129,7 @@ export interface GamesState {
 
 export interface Amenity {
   id: string
-  name: 'Party Room' | 'Rooftop' | 'Grill Area'
+  name: 'Party Room' | 'Rooftop' | 'Grill Area' | 'My Apartment'
   status: 'not_checked' | 'pending' | 'reserved'
   reservationLink: string
   confirmationNote: string

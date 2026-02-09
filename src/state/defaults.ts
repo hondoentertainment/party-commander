@@ -66,6 +66,13 @@ export const defaultPartyState: PartyState = {
         confirmationNote: '',
       },
       {
+        id: 'apartment',
+        name: 'My Apartment',
+        status: 'reserved',
+        reservationLink: '',
+        confirmationNote: '',
+      },
+      {
         id: 'rooftop',
         name: 'Rooftop',
         status: 'not_checked',
