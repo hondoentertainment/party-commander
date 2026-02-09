@@ -45,8 +45,10 @@ export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
             to={item.to}
             className={({ isActive }) =>
               [
-                'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium',
-                isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100',
+                'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition',
+                isActive
+                  ? 'bg-emerald-500/15 text-emerald-200 shadow-[0_0_18px_rgba(16,185,129,0.25)]'
+                  : 'text-slate-300 hover:bg-white/5 hover:text-white',
                 layout === 'bottom' ? 'flex-1 justify-center' : '',
               ].join(' ')
             }

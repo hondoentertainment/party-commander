@@ -4,8 +4,8 @@
   font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #111827;
-  background-color: #f9fafb;
+  color: #e5e7eb;
+  background-color: #0b0f14;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,4 +19,45 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: radial-gradient(circle at top, rgba(34, 197, 94, 0.08), transparent 45%),
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08), transparent 35%),
+    #0b0f14;
+}
+
+::selection {
+  background: rgba(34, 197, 94, 0.35);
+}
+
+.glow-orb {
+  position: absolute;
+  inset: -40% -20% auto auto;
+  height: 240px;
+  width: 240px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.35), transparent 60%);
+  filter: blur(8px);
+  opacity: 0.6;
+  animation: floatGlow 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.glow-sweep {
+  position: absolute;
+  inset: auto auto -60% -30%;
+  height: 300px;
+  width: 300px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 65%);
+  filter: blur(12px);
+  opacity: 0.45;
+  animation: floatGlow 10s ease-in-out infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes floatGlow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(12px, -10px, 0);
+  }
 }

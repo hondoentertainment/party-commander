@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useParty } from '../state/PartyContext'
 import { v4 as uuid } from 'uuid'
+import { Button } from '../components/ui/Button'
+import { Card, CardTitle } from '../components/ui/Card'
+import { Input } from '../components/ui/Input'
+import { Select } from '../components/ui/Select'
+import { Textarea } from '../components/ui/Textarea'
 
 export function InvitesPage() {
   const { state, dispatch } = useParty()
@@ -19,28 +24,28 @@ export function InvitesPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Invites Hub</h3>
-      <p className="text-sm text-slate-500">
+      <h3 className="text-2xl font-semibold text-white">Invites Hub</h3>
+      <p className="text-sm text-slate-300">
         Track the Partiful link, RSVP count, and reusable message templates.
       </p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Event Details</h4>
+      <Card>
+        <CardTitle>Event Details</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Partiful link
-            <input
+            <Input
               value={state.invites.partifulLink}
               onChange={(event) =>
                 dispatch({ type: 'update_invites', payload: { partifulLink: event.target.value } })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="https://partiful.com/e/..."
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             RSVP guest count
-            <input
+            <Input
               type="number"
               min={0}
               value={state.invites.guestCount}
@@ -50,22 +55,22 @@ export function InvitesPage() {
                   payload: { guestCount: Number(event.target.value) },
                 })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             />
           </label>
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Message Templates</h4>
+      <Card>
+        <CardTitle>Message Templates</CardTitle>
         <div className="mt-4 space-y-4">
           {(['arrival', 'music', 'rooftop'] as const).map((key) => (
-            <label key={key} className="block text-sm text-slate-600">
+            <label key={key} className="block text-sm text-slate-300">
               {key === 'arrival' && 'Arrival instructions'}
               {key === 'music' && 'Music share link'}
               {key === 'rooftop' && 'Rooftop details'}
               <div className="mt-2 flex gap-2">
-                <textarea
+                <Textarea
                   value={state.invites.messageTemplates[key]}
                   onChange={(event) =>
                     dispatch({
@@ -79,20 +84,20 @@ export function InvitesPage() {
                     })
                   }
                   rows={3}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 />
-                <button
+                <Button
                   type="button"
                   onClick={() => handleCopy(key)}
-                  className="h-10 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  variant="outline"
+                  className="h-10 px-3 text-xs"
                 >
                   {copiedKey === key ? 'Copied' : 'Copy'}
-                </button>
+                </Button>
               </div>
             </label>
           ))}
         </div>
-      </section>
+      </Card>
     </div>
   )
 }
@@ -133,112 +138,109 @@ export function MenuPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Menu Builder</h3>
-      <p className="text-sm text-slate-500">
+      <h3 className="text-2xl font-semibold text-white">Menu Builder</h3>
+      <p className="text-sm text-slate-300">
         Add items by category and source to build prep lists.
       </p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Add menu item</h4>
+      <Card>
+        <CardTitle>Add menu item</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Item name
-            <input
+            <Input
               value={draft.name}
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Buffalo sliders"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Category
-            <select
+            <Select
               value={draft.category}
               onChange={(event) =>
                 setDraft({ ...draft, category: event.target.value as typeof draft.category })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="snacks">Snacks</option>
               <option value="mains">Mains</option>
               <option value="dessert">Dessert</option>
               <option value="late_night">Late-night</option>
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Source
-            <select
+            <Select
               value={draft.source}
               onChange={(event) =>
                 setDraft({ ...draft, source: event.target.value as typeof draft.source })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="make">Make</option>
               <option value="order">Order</option>
               <option value="potluck">Potluck</option>
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Servings
-            <input
+            <Input
               type="number"
               min={0}
               value={draft.servings}
               onChange={(event) =>
                 setDraft({ ...draft, servings: Number(event.target.value) })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             />
           </label>
-          <label className="text-sm text-slate-600 md:col-span-2">
+          <label className="text-sm text-slate-300 md:col-span-2">
             Notes
-            <input
+            <Input
               value={draft.notes}
               onChange={(event) => setDraft({ ...draft, notes: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Order by Friday"
             />
           </label>
         </div>
-        <button
-          type="button"
-          onClick={addItem}
-          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-        >
+        <Button type="button" onClick={addItem} className="mt-4">
           Add item
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Menu list</h4>
+      <Card>
+        <CardTitle>Menu list</CardTitle>
         {state.menu.items.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">No items yet.</p>
+          <p className="mt-4 text-sm text-slate-400">No items yet.</p>
         ) : (
           <div className="mt-4 space-y-3">
             {state.menu.items.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
               >
                 <div>
-                  <p className="font-semibold text-slate-900">{item.name}</p>
-                  <p className="text-xs uppercase text-slate-500">
+                  <p className="font-semibold text-white">{item.name}</p>
+                  <p className="text-xs uppercase text-slate-400">
                     {item.category} · {item.source} · {item.servings} servings
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
                   onClick={() => removeItem(item.id)}
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-white"
+                  variant="outline"
+                  className="px-3 py-1 text-xs"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }
@@ -265,65 +267,57 @@ export function DrinksPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Themed Drinks</h3>
-      <p className="text-sm text-slate-500">
+      <h3 className="text-2xl font-semibold text-white">Themed Drinks</h3>
+      <p className="text-sm text-slate-300">
         Auto-suggestions based on theme plus a customizable shopping list.
       </p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Suggestions</h4>
-        <ul className="mt-4 space-y-3 text-sm text-slate-600">
+      <Card>
+        <CardTitle>Suggestions</CardTitle>
+        <ul className="mt-4 space-y-3 text-sm text-slate-300">
           {state.drinks.suggestions.map((drink) => (
-            <li key={drink.id} className="rounded-xl bg-slate-50 px-4 py-3">
+            <li key={drink.id} className="rounded-xl bg-white/5 px-4 py-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-slate-900">{drink.name}</p>
-                <span className="rounded-full bg-slate-200 px-2 py-1 text-xs uppercase text-slate-600">
+                <p className="font-semibold text-white">{drink.name}</p>
+                <span className="rounded-full bg-white/10 px-2 py-1 text-xs uppercase text-slate-300">
                   {drink.type}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-400">
                 {drink.ingredients.join(', ')}
               </p>
-              <p className="mt-2 text-xs text-slate-500">{drink.prep}</p>
+              <p className="mt-2 text-xs text-slate-400">{drink.prep}</p>
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Shopping List</h4>
+      <Card>
+        <CardTitle>Shopping List</CardTitle>
         <div className="mt-4 flex gap-2">
-          <input
+          <Input
             value={extraItem}
             onChange={(event) => setExtraItem(event.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="flex-1"
             placeholder="Add extra garnish"
           />
-          <button
-            type="button"
-            onClick={addExtraItem}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Button type="button" onClick={addExtraItem}>
             Add
-          </button>
+          </Button>
         </div>
-        <ul className="mt-4 space-y-2 text-sm text-slate-600">
+        <ul className="mt-4 space-y-2 text-sm text-slate-300">
           {state.drinks.shoppingList.map((item) => (
-            <li key={item} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+            <li key={item} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
               <span>{item}</span>
               {state.drinks.extraItems.includes(item) ? (
-                <button
-                  type="button"
-                  onClick={() => removeExtraItem(item)}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                >
+                <Button variant="ghost" onClick={() => removeExtraItem(item)} className="text-xs">
                   Remove
-                </button>
+                </Button>
               ) : null}
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
     </div>
   )
 }
@@ -386,149 +380,146 @@ export function DecorPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Decor & Ambience</h3>
-      <p className="text-sm text-slate-500">Track decor by zone with status and storage notes.</p>
+      <h3 className="text-2xl font-semibold text-white">Decor & Ambience</h3>
+      <p className="text-sm text-slate-300">Track decor by zone with status and storage notes.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Add decor item</h4>
+      <Card>
+        <CardTitle>Add decor item</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Item
-            <input
+            <Input
               value={draft.name}
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="String lights"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Zone
-            <select
+            <Select
               value={draft.zone}
               onChange={(event) =>
                 setDraft({ ...draft, zone: event.target.value as typeof draft.zone })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="entry">Entry</option>
               <option value="living_room">Living room</option>
               <option value="table">Table</option>
               <option value="lighting">Lighting</option>
               <option value="bathroom">Bathroom</option>
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Quantity
-            <input
+            <Input
               type="number"
               min={1}
               value={draft.quantity}
               onChange={(event) =>
                 setDraft({ ...draft, quantity: Number(event.target.value) })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Status
-            <select
+            <Select
               value={draft.status}
               onChange={(event) =>
                 setDraft({ ...draft, status: event.target.value as typeof draft.status })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="not_started">Not started</option>
               <option value="in_progress">In progress</option>
               <option value="done">Done</option>
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Buy link
-            <input
+            <Input
               value={draft.buyLink}
               onChange={(event) => setDraft({ ...draft, buyLink: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="https://..."
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             ETA
-            <input
+            <Input
               value={draft.eta}
               onChange={(event) => setDraft({ ...draft, eta: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Arrives Wed"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Cost
-            <input
+            <Input
               value={draft.cost}
               onChange={(event) => setDraft({ ...draft, cost: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="$24"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Reusable
-            <select
+            <Select
               value={draft.reusable ? 'yes' : 'no'}
               onChange={(event) => setDraft({ ...draft, reusable: event.target.value === 'yes' })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="no">Disposable</option>
               <option value="yes">Reusable</option>
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600 md:col-span-2">
+          <label className="text-sm text-slate-300 md:col-span-2">
             Storage note
-            <input
+            <Input
               value={draft.storageNote}
               onChange={(event) => setDraft({ ...draft, storageNote: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Store with winter decor"
             />
           </label>
         </div>
-        <button
-          type="button"
-          onClick={addItem}
-          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-        >
+        <Button type="button" onClick={addItem} className="mt-4">
           Add decor
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Decor list</h4>
+      <Card>
+        <CardTitle>Decor list</CardTitle>
         {state.decor.items.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">No decor yet.</p>
+          <p className="mt-4 text-sm text-slate-400">No decor yet.</p>
         ) : (
           <div className="mt-4 space-y-3">
             {state.decor.items.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
               >
                 <div>
-                  <p className="font-semibold text-slate-900">{item.name}</p>
-                  <p className="text-xs uppercase text-slate-500">
+                  <p className="font-semibold text-white">{item.name}</p>
+                  <p className="text-xs uppercase text-slate-400">
                     {item.zone.replace('_', ' ')} · qty {item.quantity} · {item.status}
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
                   onClick={() => removeItem(item.id)}
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-white"
+                  variant="outline"
+                  className="px-3 py-1 text-xs"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }
@@ -574,83 +565,78 @@ export function CleaningPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Cleaning & Bathroom</h3>
-      <p className="text-sm text-slate-500">Phase-based checklists and supply tracking.</p>
+      <h3 className="text-2xl font-semibold text-white">Cleaning & Bathroom</h3>
+      <p className="text-sm text-slate-300">Phase-based checklists and supply tracking.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Bathroom essentials</h4>
+      <Card>
+        <CardTitle>Bathroom essentials</CardTitle>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {state.cleaning.bathroomSupplies.map((item) => (
-            <button
+            <Button
               key={item.id}
               type="button"
               onClick={() => toggleBathroomSupply(item.id)}
+              variant="outline"
               className={[
                 'flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold',
-                item.status === 'done'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-slate-50 text-slate-600',
+                item.status === 'done' ? 'bg-emerald-500/20 text-emerald-200' : '',
               ].join(' ')}
             >
               {item.name}
               <span className="text-xs uppercase">
                 {item.status === 'done' ? 'ready' : 'needs'}
               </span>
-            </button>
+            </Button>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Phase checklist</h4>
+      <Card>
+        <CardTitle>Phase checklist</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Task
-            <input
+            <Input
               value={draft.label}
               onChange={(event) => setDraft({ ...draft, label: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Stock extra towels"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Phase
-            <select
+            <Select
               value={draft.phase}
               onChange={(event) =>
                 setDraft({ ...draft, phase: event.target.value as typeof draft.phase })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="before">Before</option>
               <option value="during">During</option>
               <option value="after">After</option>
-            </select>
+            </Select>
           </label>
           <div className="flex items-end">
-            <button
-              type="button"
-              onClick={addChecklist}
-              className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-            >
+            <Button type="button" onClick={addChecklist} className="w-full">
               Add task
-            </button>
+            </Button>
           </div>
         </div>
 
         {state.cleaning.checklists.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">No cleaning tasks yet.</p>
+          <p className="mt-4 text-sm text-slate-400">No cleaning tasks yet.</p>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {state.cleaning.checklists.map((task) => (
-              <div key={task.id} className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
-                <p className="font-semibold text-slate-900">{task.label}</p>
-                <p className="text-xs uppercase text-slate-500">{task.phase}</p>
+              <div key={task.id} className="rounded-xl bg-white/5 px-4 py-3 text-sm">
+                <p className="font-semibold text-white">{task.label}</p>
+                <p className="text-xs uppercase text-slate-400">{task.phase}</p>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }
@@ -716,81 +702,78 @@ export function TimelinePage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Timeline</h3>
-      <p className="text-sm text-slate-500">Tasks relative to party start.</p>
+      <h3 className="text-2xl font-semibold text-white">Timeline</h3>
+      <p className="text-sm text-slate-300">Tasks relative to party start.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Add timeline task</h4>
+      <Card>
+        <CardTitle>Add timeline task</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <label className="text-sm text-slate-600 md:col-span-2">
+          <label className="text-sm text-slate-300 md:col-span-2">
             Task title
-            <input
+            <Input
               value={draft.title}
               onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Order ice and mixers"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Hours from start
-            <input
+            <Input
               type="number"
               value={draft.offsetHours}
               onChange={(event) =>
                 setDraft({ ...draft, offsetHours: Number(event.target.value) })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             />
           </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={addTask}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Button type="button" onClick={addTask}>
             Add task
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={exportCalendar}
             disabled={!state.core.date}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            variant="outline"
           >
             Export calendar
-          </button>
+          </Button>
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Timeline tasks</h4>
+      <Card>
+        <CardTitle>Timeline tasks</CardTitle>
         {state.timeline.tasks.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">No tasks yet.</p>
+          <p className="mt-4 text-sm text-slate-400">No tasks yet.</p>
         ) : (
           <div className="mt-4 space-y-3">
             {state.timeline.tasks.map((task) => (
               <div
                 key={task.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
               >
                 <div>
-                  <p className="font-semibold text-slate-900">{task.title}</p>
-                  <p className="text-xs uppercase text-slate-500">
+                  <p className="font-semibold text-white">{task.title}</p>
+                  <p className="text-xs uppercase text-slate-400">
                     {task.offsetHours}h from start
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
                   onClick={() => removeTask(task.id)}
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-white"
+                  variant="outline"
+                  className="px-3 py-1 text-xs"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }
@@ -799,28 +782,28 @@ export function MusicPage() {
   const { state, dispatch } = useParty()
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Music Hub</h3>
-      <p className="text-sm text-slate-500">Link playlists for each party phase.</p>
+      <h3 className="text-2xl font-semibold text-white">Music Hub</h3>
+      <p className="text-sm text-slate-300">Link playlists for each party phase.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Main link</h4>
-        <input
+      <Card>
+        <CardTitle>Main link</CardTitle>
+        <Input
           value={state.music.mainLink}
           onChange={(event) =>
             dispatch({ type: 'update_music', payload: { mainLink: event.target.value } })
           }
-          className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          className="mt-3"
           placeholder="https://open.spotify.com/..."
         />
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Phase playlists</h4>
+      <Card>
+        <CardTitle>Phase playlists</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {(['pregame', 'arrival', 'peak', 'late', 'windDown'] as const).map((phase) => (
-            <label key={phase} className="text-sm text-slate-600">
+            <label key={phase} className="text-sm text-slate-300">
               {phase}
-              <input
+              <Input
                 value={state.music.playlists[phase]}
                 onChange={(event) =>
                   dispatch({
@@ -830,13 +813,13 @@ export function MusicPage() {
                     },
                   })
                 }
-                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="mt-2"
                 placeholder="https://open.spotify.com/..."
               />
             </label>
           ))}
         </div>
-      </section>
+      </Card>
     </div>
   )
 }
@@ -893,111 +876,107 @@ export function GamesPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Game Generator</h3>
-      <p className="text-sm text-slate-500">Add games with supplies and timing.</p>
+      <h3 className="text-2xl font-semibold text-white">Game Generator</h3>
+      <p className="text-sm text-slate-300">Add games with supplies and timing.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Add game</h4>
+      <Card>
+        <CardTitle>Add game</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Game name
-            <input
+            <Input
               value={draft.name}
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Two truths and a lie"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Category
-            <select
+            <Select
               value={draft.category}
               onChange={(event) =>
                 setDraft({ ...draft, category: event.target.value as typeof draft.category })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="icebreaker">Icebreaker</option>
               <option value="main">Main game</option>
               <option value="chaos">Optional chaos</option>
               <option value="wind_down">Wind-down</option>
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Duration (mins)
-            <input
+            <Input
               type="number"
               min={5}
               value={draft.durationMins}
               onChange={(event) =>
                 setDraft({ ...draft, durationMins: Number(event.target.value) })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Group size
-            <input
+            <Input
               value={draft.groupSize}
               onChange={(event) => setDraft({ ...draft, groupSize: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="6-12"
             />
           </label>
-          <label className="text-sm text-slate-600 md:col-span-2">
+          <label className="text-sm text-slate-300 md:col-span-2">
             Rules
-            <textarea
+            <Textarea
               value={draft.rules}
               onChange={(event) => setDraft({ ...draft, rules: event.target.value })}
               rows={3}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               placeholder="Each person shares two truths and one lie..."
             />
           </label>
-          <label className="text-sm text-slate-600 md:col-span-2">
+          <label className="text-sm text-slate-300 md:col-span-2">
             Supplies (comma separated)
-            <input
+            <Input
               value={draft.supplies}
               onChange={(event) => setDraft({ ...draft, supplies: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="Cards, markers"
             />
           </label>
         </div>
-        <button
-          type="button"
-          onClick={addGame}
-          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-        >
+        <Button type="button" onClick={addGame} className="mt-4">
           Add game
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Game list</h4>
+      <Card>
+        <CardTitle>Game list</CardTitle>
         {state.games.games.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">No games yet.</p>
+          <p className="mt-4 text-sm text-slate-400">No games yet.</p>
         ) : (
           <div className="mt-4 space-y-3">
             {state.games.games.map((game) => (
-              <div key={game.id} className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
+              <div key={game.id} className="rounded-xl bg-white/5 px-4 py-3 text-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{game.name}</p>
-                    <p className="text-xs uppercase text-slate-500">
+                    <p className="font-semibold text-white">{game.name}</p>
+                    <p className="text-xs uppercase text-slate-400">
                       {game.category} · {game.durationMins} mins · {game.groupSize}
                     </p>
                   </div>
-                  <button
+                  <Button
                     type="button"
                     onClick={() => removeGame(game.id)}
-                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-white"
+                    variant="outline"
+                    className="px-3 py-1 text-xs"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </div>
                 {game.supplies.length ? (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-slate-400">
                     Supplies: {game.supplies.join(', ')}
                   </p>
                 ) : null}
@@ -1005,7 +984,7 @@ export function GamesPage() {
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }
@@ -1026,59 +1005,59 @@ export function VenuePage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Venue & Rooftop Readiness</h3>
-      <p className="text-sm text-slate-500">Track amenities and propane status.</p>
+      <h3 className="text-2xl font-semibold text-white">Venue & Rooftop Readiness</h3>
+      <p className="text-sm text-slate-300">Track amenities and propane status.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Amenities</h4>
+      <Card>
+        <CardTitle>Amenities</CardTitle>
         <div className="mt-4 space-y-4">
           {state.venue.amenities.map((amenity) => (
-            <div key={amenity.id} className="rounded-xl bg-slate-50 p-4 text-sm">
+            <div key={amenity.id} className="rounded-xl bg-white/5 p-4 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold text-slate-900">{amenity.name}</p>
-                <select
+                <p className="font-semibold text-white">{amenity.name}</p>
+                <Select
                   value={amenity.status}
                   onChange={(event) =>
                     updateAmenity(amenity.id, {
                       status: event.target.value as typeof amenity.status,
                     })
                   }
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs"
+                  className="rounded-lg px-3 py-1 text-xs"
                 >
                   <option value="not_checked">Not checked</option>
                   <option value="pending">Pending</option>
                   <option value="reserved">Reserved</option>
-                </select>
+                </Select>
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <input
+                <Input
                   value={amenity.reservationLink}
                   onChange={(event) =>
                     updateAmenity(amenity.id, { reservationLink: event.target.value })
                   }
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                  className="text-xs"
                   placeholder="Reservation link"
                 />
-                <input
+                <Input
                   value={amenity.confirmationNote}
                   onChange={(event) =>
                     updateAmenity(amenity.id, { confirmationNote: event.target.value })
                   }
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                  className="text-xs"
                   placeholder="Confirmation note"
                 />
               </div>
             </div>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Grill Propane</h4>
+      <Card>
+        <CardTitle>Grill Propane</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Tank level
-            <select
+            <Select
               value={state.venue.propane.level}
               onChange={(event) =>
                 dispatch({
@@ -1088,7 +1067,7 @@ export function VenuePage() {
                   },
                 })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="full">Full</option>
               <option value="three_quarter">3/4</option>
@@ -1096,11 +1075,11 @@ export function VenuePage() {
               <option value="quarter">1/4</option>
               <option value="empty">Empty</option>
               <option value="unknown">Unknown</option>
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             Last checked
-            <input
+            <Input
               type="datetime-local"
               value={state.venue.propane.lastChecked}
               onChange={(event) =>
@@ -1111,12 +1090,12 @@ export function VenuePage() {
                   },
                 })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             No-grill fallback
-            <select
+            <Select
               value={state.venue.propane.noGrillFallback ? 'yes' : 'no'}
               onChange={(event) =>
                 dispatch({
@@ -1129,14 +1108,14 @@ export function VenuePage() {
                   },
                 })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
             >
               <option value="no">No</option>
               <option value="yes">Yes</option>
-            </select>
+            </Select>
           </label>
         </div>
-      </section>
+      </Card>
     </div>
   )
 }
@@ -1163,73 +1142,64 @@ export function EntryPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Entry Mode</h3>
-      <p className="text-sm text-slate-500">Buzz-in instructions and arrival texts.</p>
+      <h3 className="text-2xl font-semibold text-white">Entry Mode</h3>
+      <p className="text-sm text-slate-300">Buzz-in instructions and arrival texts.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Building access</h4>
+      <Card>
+        <CardTitle>Building access</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-slate-300">
             ButterflyMX link
-            <input
+            <Input
               value={state.entry.butterflyLink}
               onChange={(event) =>
                 dispatch({ type: 'update_entry', payload: { butterflyLink: event.target.value } })
               }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="mt-2"
               placeholder="butterflymx://..."
             />
           </label>
-          <label className="text-sm text-slate-600 md:col-span-2">
+          <label className="text-sm text-slate-300 md:col-span-2">
             Entry instructions
-            <textarea
+            <Textarea
               value={state.entry.instructions}
               onChange={(event) =>
                 dispatch({ type: 'update_entry', payload: { instructions: event.target.value } })
               }
               rows={3}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               placeholder="Call box 1203, then take the elevator to the roof."
             />
           </label>
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Arrival texts</h4>
+      <Card>
+        <CardTitle>Arrival texts</CardTitle>
         <div className="mt-4 flex gap-2">
-          <input
+          <Input
             value={textDraft}
             onChange={(event) => setTextDraft(event.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="flex-1"
             placeholder="Buzz in and come up!"
           />
-          <button
-            type="button"
-            onClick={addText}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Button type="button" onClick={addText}>
             Add
-          </button>
+          </Button>
         </div>
         <div className="mt-4 space-y-2">
           {state.entry.arrivalTexts.map((text) => (
             <div
               key={text}
-              className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"
+              className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"
             >
               <span>{text}</span>
-              <button
-                type="button"
-                onClick={() => removeText(text)}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-              >
+              <Button variant="ghost" onClick={() => removeText(text)} className="text-xs">
                 Remove
-              </button>
+              </Button>
             </div>
           ))}
         </div>
-      </section>
+      </Card>
     </div>
   )
 }
@@ -1261,60 +1231,54 @@ export function LivePage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Live Party Mode</h3>
-      <p className="text-sm text-slate-500">One-tap controls for the night.</p>
+      <h3 className="text-2xl font-semibold text-white">Live Party Mode</h3>
+      <p className="text-sm text-slate-300">One-tap controls for the night.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Now playing</h4>
-        <p className="mt-2 text-sm text-slate-600">
+      <Card>
+        <CardTitle>Now playing</CardTitle>
+        <p className="mt-2 text-sm text-slate-300">
           {state.music.mainLink ? state.music.mainLink : 'Add a main playlist link.'}
         </p>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Restock alerts</h4>
+      <Card>
+        <CardTitle>Restock alerts</CardTitle>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {Object.entries(state.live.restockAlerts).map(([key, value]) => (
-            <button
+            <Button
               key={key}
               type="button"
               onClick={() => toggleAlert(key as keyof typeof state.live.restockAlerts)}
-              className={[
-                'rounded-xl px-4 py-3 text-sm font-semibold',
-                value ? 'bg-rose-100 text-rose-700' : 'bg-slate-50 text-slate-600',
-              ].join(' ')}
+              variant="outline"
+              className={value ? 'bg-rose-500/20 text-rose-200' : 'bg-white/5 text-slate-300'}
             >
               {key}
-            </button>
+            </Button>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Quick notes</h4>
+      <Card>
+        <CardTitle>Quick notes</CardTitle>
         <div className="mt-4 flex gap-2">
-          <input
+          <Input
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="flex-1"
             placeholder="Need more ice by 9 PM"
           />
-          <button
-            type="button"
-            onClick={addNote}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Button type="button" onClick={addNote}>
             Add
-          </button>
+          </Button>
         </div>
-        <ul className="mt-4 space-y-2 text-sm text-slate-600">
+        <ul className="mt-4 space-y-2 text-sm text-slate-300">
           {state.live.quickNotes.map((entry) => (
-            <li key={entry} className="rounded-lg bg-slate-50 px-3 py-2">
+            <li key={entry} className="rounded-lg bg-white/5 px-3 py-2">
               {entry}
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
     </div>
   )
 }
@@ -1344,73 +1308,65 @@ export function PostPartyPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-xl font-semibold text-slate-900">Post-Party Wrap</h3>
-      <p className="text-sm text-slate-500">Capture what worked and save favorites.</p>
+      <h3 className="text-2xl font-semibold text-white">Post-Party Wrap</h3>
+      <p className="text-sm text-slate-300">Capture what worked and save favorites.</p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Cleanup checklist</h4>
+      <Card>
+        <CardTitle>Cleanup checklist</CardTitle>
         <div className="mt-4 flex gap-2">
-          <input
+          <Input
             value={cleanupItem}
             onChange={(event) => setCleanupItem(event.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="flex-1"
             placeholder="Take out recycling"
           />
-          <button
-            type="button"
-            onClick={addCleanup}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Button type="button" onClick={addCleanup}>
             Add
-          </button>
+          </Button>
         </div>
-        <ul className="mt-4 space-y-2 text-sm text-slate-600">
+        <ul className="mt-4 space-y-2 text-sm text-slate-300">
           {state.postParty.cleanupChecklist.map((item) => (
-            <li key={item} className="rounded-lg bg-slate-50 px-3 py-2">
+            <li key={item} className="rounded-lg bg-white/5 px-3 py-2">
               {item}
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Leftovers</h4>
+      <Card>
+        <CardTitle>Leftovers</CardTitle>
         <div className="mt-4 flex gap-2">
-          <input
+          <Input
             value={leftoverItem}
             onChange={(event) => setLeftoverItem(event.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="flex-1"
             placeholder="Half tray of sliders"
           />
-          <button
-            type="button"
-            onClick={addLeftover}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Button type="button" onClick={addLeftover}>
             Add
-          </button>
+          </Button>
         </div>
-        <ul className="mt-4 space-y-2 text-sm text-slate-600">
+        <ul className="mt-4 space-y-2 text-sm text-slate-300">
           {state.postParty.leftovers.map((item) => (
-            <li key={item} className="rounded-lg bg-slate-50 px-3 py-2">
+            <li key={item} className="rounded-lg bg-white/5 px-3 py-2">
               {item}
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h4 className="text-base font-semibold text-slate-900">Notes</h4>
-        <textarea
+      <Card>
+        <CardTitle>Notes</CardTitle>
+        <Textarea
           value={state.postParty.notes}
           onChange={(event) =>
             dispatch({ type: 'update_post_party', payload: { notes: event.target.value } })
           }
           rows={4}
-          className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          className="mt-3"
           placeholder="What worked? What didn’t?"
         />
-      </section>
+      </Card>
     </div>
   )
 }
