@@ -173,11 +173,40 @@ export interface PostPartyState {
   }
 }
 
+export interface PhotoVideoShot {
+  id: string
+  title: string
+  type: 'photo' | 'video'
+  status: ItemStatus
+  notes: string
+}
+
+export interface GalleryPhoto {
+  id: string
+  dataUrl: string
+  caption: string
+  addedAt: string
+  filename: string
+}
+
+export interface PhotoVideoState {
+  shots: PhotoVideoShot[]
+  equipment: string[]
+  photos: GalleryPhoto[]
+}
+
+export interface AdminState {
+  modules: Record<string, boolean>
+}
+
 export interface PartyState {
   core: PartyCore
   invites: Invites
   events: {
     items: PartyEvent[]
+  }
+  leads: {
+    items: LeadAssignment[]
   }
   menu: MenuState
   drinks: DrinksState
@@ -190,6 +219,14 @@ export interface PartyState {
   entry: EntryState
   live: LiveState
   postParty: PostPartyState
+  photoVideo: PhotoVideoState
+  admin: AdminState
+}
+
+export interface LeadAssignment {
+  id: string
+  function: string
+  leadName: string
 }
 
 export interface PartyEvent {

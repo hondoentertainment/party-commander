@@ -9,6 +9,7 @@ type PartyAction =
   | { type: 'update_core'; payload: Partial<PartyState['core']> }
   | { type: 'update_invites'; payload: Partial<PartyState['invites']> }
   | { type: 'update_events'; payload: Partial<PartyState['events']> }
+  | { type: 'update_leads'; payload: Partial<PartyState['leads']> }
   | { type: 'update_music'; payload: Partial<PartyState['music']> }
   | { type: 'update_menu'; payload: Partial<PartyState['menu']> }
   | { type: 'update_drinks'; payload: Partial<PartyState['drinks']> }
@@ -20,6 +21,8 @@ type PartyAction =
   | { type: 'update_entry'; payload: Partial<PartyState['entry']> }
   | { type: 'update_live'; payload: Partial<PartyState['live']> }
   | { type: 'update_post_party'; payload: Partial<PartyState['postParty']> }
+  | { type: 'update_photo_video'; payload: Partial<PartyState['photoVideo']> }
+  | { type: 'update_admin'; payload: Partial<PartyState['admin']> }
 
 function reducer(state: PartyState, action: PartyAction): PartyState {
   switch (action.type) {
@@ -31,6 +34,8 @@ function reducer(state: PartyState, action: PartyAction): PartyState {
       return applyEngines({ ...state, invites: { ...state.invites, ...action.payload } })
     case 'update_events':
       return applyEngines({ ...state, events: { ...state.events, ...action.payload } })
+    case 'update_leads':
+      return applyEngines({ ...state, leads: { ...state.leads, ...action.payload } })
     case 'update_music':
       return applyEngines({ ...state, music: { ...state.music, ...action.payload } })
     case 'update_menu':
@@ -53,6 +58,10 @@ function reducer(state: PartyState, action: PartyAction): PartyState {
       return applyEngines({ ...state, live: { ...state.live, ...action.payload } })
     case 'update_post_party':
       return applyEngines({ ...state, postParty: { ...state.postParty, ...action.payload } })
+    case 'update_photo_video':
+      return applyEngines({ ...state, photoVideo: { ...state.photoVideo, ...action.payload } })
+    case 'update_admin':
+      return applyEngines({ ...state, admin: { ...state.admin, ...action.payload } })
     default:
       return state
   }
@@ -66,7 +75,26 @@ const PartyContext = createContext<{
 export function PartyProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, defaultPartyState, () => {
     const stored = loadState()
-    return applyEngines(stored ?? defaultPartyState)
+    const merged = stored
+      ? {
+          ...defaultPartyState,
+          ...stored,
+          photoVideo: {
+            ...defaultPartyState.photoVideo,
+            ...stored.photoVideo,
+            photos: stored.photoVideo?.photos ?? defaultPartyState.photoVideo.photos,
+          },
+          admin: {
+            ...defaultPartyState.admin,
+            ...stored.admin,
+            modules: {
+              ...defaultPartyState.admin.modules,
+              ...(stored.admin?.modules ?? {}),
+            },
+          },
+        }
+      : defaultPartyState
+    return applyEngines(merged)
   })
 
   useEffect(() => {

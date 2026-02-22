@@ -1,35 +1,15 @@
 import { NavLink } from 'react-router-dom'
-import {
-  CalendarClock,
-  ClipboardList,
-  DoorOpen,
-  Home,
-  MapPin,
-  Music2,
-  Sparkles,
-  UtensilsCrossed,
-  Users,
-  Wand2,
-} from 'lucide-react'
+import { MODULES } from '../config/modules'
+import { useParty } from '../state/PartyContext'
 
-const navItems = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/invites', label: 'Invites', icon: Users },
-  { to: '/events', label: 'Events', icon: CalendarClock },
-  { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
-  { to: '/drinks', label: 'Drinks', icon: Sparkles },
-  { to: '/decor', label: 'Decor', icon: Wand2 },
-  { to: '/cleaning', label: 'Cleaning', icon: ClipboardList },
-  { to: '/timeline', label: 'Timeline', icon: CalendarClock },
-  { to: '/music', label: 'Music', icon: Music2 },
-  { to: '/games', label: 'Games', icon: Sparkles },
-  { to: '/venue', label: 'Venue', icon: MapPin },
-  { to: '/entry', label: 'Entry', icon: DoorOpen },
-  { to: '/live', label: 'Live', icon: Sparkles },
-  { to: '/post-party', label: 'Wrap', icon: ClipboardList },
-]
+function isModuleEnabled(modules: Record<string, boolean>, id: string): boolean {
+  return modules[id] !== false
+}
 
 export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
+  const { state } = useParty()
+  const navItems = MODULES.filter((m) => isModuleEnabled(state.admin.modules, m.id))
+
   return (
     <nav
       className={
@@ -42,7 +22,7 @@ export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
         const Icon = item.icon
         return (
           <NavLink
-            key={item.to}
+            key={item.id}
             to={item.to}
             className={({ isActive }) =>
               [
