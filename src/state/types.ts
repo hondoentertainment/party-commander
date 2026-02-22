@@ -50,10 +50,16 @@ export interface DrinkSuggestion {
   prep: string
 }
 
+export type ShoppingListBaseKey = 'ice' | 'cups' | 'napkins'
+
 export interface DrinksState {
   suggestions: DrinkSuggestion[]
   shoppingList: string[]
   extraItems: string[]
+  /** User overrides for base shopping list items (ice, cups, napkins) */
+  shoppingListOverrides?: Partial<Record<ShoppingListBaseKey, string>>
+  /** Base items to hide from the list */
+  hiddenBaseItems?: ShoppingListBaseKey[]
 }
 
 export interface DecorItem {
@@ -199,9 +205,24 @@ export interface AdminState {
   modules: Record<string, boolean>
 }
 
+export interface BudgetLineItem {
+  id: string
+  label: string
+  category: 'decor' | 'food' | 'drinks' | 'venue' | 'supplies' | 'other'
+  amount: number
+  notes?: string
+}
+
+export interface BudgetState {
+  lineItems: BudgetLineItem[]
+  /** Optional budget limit in dollars */
+  limit?: number
+}
+
 export interface PartyState {
   core: PartyCore
   invites: Invites
+  budget: BudgetState
   events: {
     items: PartyEvent[]
   }

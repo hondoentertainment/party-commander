@@ -49,6 +49,7 @@ export function AdminPage() {
                   type="button"
                   role="switch"
                   aria-checked={enabled}
+                  aria-label={`${enabled ? 'Disable' : 'Enable'} ${mod.label} module`}
                   onClick={() => toggleModule(mod.id, !enabled)}
                   className={[
                     'relative h-7 w-12 shrink-0 rounded-full transition',

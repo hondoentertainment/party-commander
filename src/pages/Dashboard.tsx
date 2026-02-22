@@ -6,6 +6,8 @@ import {
   isAfter,
   parseISO,
 } from 'date-fns'
+import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import { SectionHeader } from '../components/SectionHeader'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -97,13 +99,30 @@ export function Dashboard() {
             </CardDescription>
           </CardHeader>
           <div className="relative mt-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div
+              className={[
+                'rounded-2xl border p-4 transition',
+                countdown
+                  ? 'border-white/10 bg-black/30'
+                  : 'border-amber-500/20 bg-amber-500/5 opacity-90',
+              ].join(' ')}
+            >
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Countdown</p>
-              <p className="mt-2 text-2xl font-semibold text-white">
+              <p
+                className={[
+                  'mt-2 text-2xl font-semibold',
+                  countdown ? 'text-white' : 'text-amber-200/90',
+                ].join(' ')}
+              >
                 {countdown
                   ? `${countdown.days}d ${countdown.hours}h ${countdown.minutes}m`
                   : 'Add party date'}
               </p>
+              {!countdown ? (
+                <p className="mt-1 text-xs text-amber-300/70">
+                  Set date below to see countdown
+                </p>
+              ) : null}
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Theme</p>
@@ -206,14 +225,36 @@ export function Dashboard() {
         </Card>
 
         <Card>
-          <CardTitle>Next 3 Actions</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Next 3 Actions</CardTitle>
+            <Link
+              to="/timeline"
+              className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+            >
+              View all
+            </Link>
+          </div>
           <ul className="mt-4 space-y-2 text-sm text-slate-300">
             {nextActions.length === 0 ? (
-              <li className="rounded-lg bg-white/5 px-3 py-2">Generate timeline tasks.</li>
+              <li>
+                <Link
+                  to="/timeline"
+                  className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-slate-400 transition hover:bg-white/10 hover:text-slate-300"
+                >
+                  Generate timeline tasks.
+                  <ChevronRight size={16} className="shrink-0" />
+                </Link>
+              </li>
             ) : (
               nextActions.map((task) => (
-                <li key={task.id} className="rounded-lg bg-white/5 px-3 py-2">
-                  {task.title}
+                <li key={task.id}>
+                  <Link
+                    to="/timeline"
+                    className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <span>{task.title}</span>
+                    <ChevronRight size={16} className="shrink-0 text-slate-500" />
+                  </Link>
                 </li>
               ))
             )}

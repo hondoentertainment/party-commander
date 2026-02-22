@@ -10,6 +10,10 @@ export const defaultPartyState: PartyState = {
     date: '',
     location: '',
   },
+  budget: {
+    lineItems: [],
+    limit: undefined,
+  },
   invites: {
     partifulLink: 'https://partiful.com/e/7prpqOz68SjhM3qC4Cdk?c=09OfrcKm',
     guestCount: 0,
@@ -24,6 +28,7 @@ export const defaultPartyState: PartyState = {
   },
   leads: {
     items: [
+      { id: 'budget', function: 'Budget', leadName: '' },
       { id: 'invites', function: 'Invites', leadName: '' },
       { id: 'menu', function: 'Menu', leadName: '' },
       { id: 'drinks', function: 'Drinks', leadName: '' },
@@ -46,6 +51,8 @@ export const defaultPartyState: PartyState = {
     suggestions: [],
     shoppingList: [],
     extraItems: [],
+    shoppingListOverrides: {},
+    hiddenBaseItems: [],
   },
   decor: {
     items: [],
@@ -145,6 +152,7 @@ export const defaultPartyState: PartyState = {
   admin: {
     modules: {
       home: true,
+      budget: true,
       invites: true,
       events: true,
       leads: true,

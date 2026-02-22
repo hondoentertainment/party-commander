@@ -2,6 +2,7 @@ import {
   CalendarClock,
   Camera,
   ClipboardList,
+  DollarSign,
   DoorOpen,
   Home,
   MapPin,
@@ -16,6 +17,7 @@ import type { LucideIcon } from 'lucide-react'
 
 export type ModuleId =
   | 'home'
+  | 'budget'
   | 'invites'
   | 'events'
   | 'leads'
@@ -43,6 +45,7 @@ export interface ModuleConfig {
 
 export const MODULES: ModuleConfig[] = [
   { id: 'home', to: '/', label: 'Home', icon: Home, canDisable: false },
+  { id: 'budget', to: '/budget', label: 'Budget', icon: DollarSign, canDisable: true },
   { id: 'invites', to: '/invites', label: 'Invites', icon: Users, canDisable: true },
   { id: 'events', to: '/events', label: 'Events', icon: CalendarClock, canDisable: true },
   { id: 'leads', to: '/leads', label: 'Leads', icon: Users, canDisable: true },

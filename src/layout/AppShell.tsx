@@ -7,7 +7,13 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-[#0b0f14] text-slate-100">
-      <div className="hidden min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl md:fixed md:inset-y-0 md:flex md:w-72 md:flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:block focus:rounded-lg focus:bg-emerald-500 focus:px-4 focus:py-2 focus:text-black focus:outline-none focus:m-0 focus:h-auto focus:w-auto focus:overflow-visible focus:p-4 focus:py-2"
+      >
+        Skip to main content
+      </a>
+      <div className="hidden min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl md:fixed md:inset-y-0 md:flex md:w-72 md:flex-col" aria-label="Sidebar">
         <div className="px-6 py-6">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Party Command Center</p>
           <h1 className="text-2xl font-semibold text-white">Host Command</h1>
@@ -33,14 +39,14 @@ export function AppShell() {
                 Party Command Center
               </p>
               <h2 className="mt-2 text-3xl font-semibold text-white">Plan, run, and wrap.</h2>
-              <p className="text-sm text-slate-300">All modules sync in real time.</p>
+              <p className="text-sm text-slate-300">Data saved locally in your browser.</p>
             </div>
             <div className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-200">
               Live Preview
             </div>
           </div>
         </header>
-        <main className="px-6 py-8">
+        <main id="main-content" className="px-6 py-8" role="main">
           <Outlet />
         </main>
       </div>

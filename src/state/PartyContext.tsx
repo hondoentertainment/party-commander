@@ -7,6 +7,7 @@ import type { PartyState } from './types'
 type PartyAction =
   | { type: 'set_state'; payload: PartyState }
   | { type: 'update_core'; payload: Partial<PartyState['core']> }
+  | { type: 'update_budget'; payload: Partial<PartyState['budget']> }
   | { type: 'update_invites'; payload: Partial<PartyState['invites']> }
   | { type: 'update_events'; payload: Partial<PartyState['events']> }
   | { type: 'update_leads'; payload: Partial<PartyState['leads']> }
@@ -30,6 +31,8 @@ function reducer(state: PartyState, action: PartyAction): PartyState {
       return applyEngines(action.payload)
     case 'update_core':
       return applyEngines({ ...state, core: { ...state.core, ...action.payload } })
+    case 'update_budget':
+      return applyEngines({ ...state, budget: { ...state.budget, ...action.payload } })
     case 'update_invites':
       return applyEngines({ ...state, invites: { ...state.invites, ...action.payload } })
     case 'update_events':
@@ -79,6 +82,11 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       ? {
           ...defaultPartyState,
           ...stored,
+          budget: {
+            ...defaultPartyState.budget,
+            ...(stored.budget ?? {}),
+            lineItems: stored.budget?.lineItems ?? defaultPartyState.budget.lineItems,
+          },
           photoVideo: {
             ...defaultPartyState.photoVideo,
             ...stored.photoVideo,

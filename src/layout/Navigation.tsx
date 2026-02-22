@@ -12,6 +12,7 @@ export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
 
   return (
     <nav
+      aria-label="Main navigation"
       className={
         layout === 'sidebar'
           ? 'flex h-full flex-col gap-1 px-3 py-4'

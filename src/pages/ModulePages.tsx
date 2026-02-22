@@ -7,7 +7,242 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Textarea } from '../components/ui/Textarea'
 import { Download, ImagePlus, Trash2 } from 'lucide-react'
-import type { GalleryPhoto } from '../state/types'
+import { getShoppingListItems } from '../state/engines'
+import type { GalleryPhoto, ShoppingListBaseKey } from '../state/types'
+import type { BudgetLineItem } from '../state/types'
+
+/** Parse dollar amount from string like "$24" or "24.50" */
+function parseCost(value: string): number {
+  const cleaned = String(value).replace(/[$,]/g, '').trim()
+  const n = parseFloat(cleaned)
+  return Number.isFinite(n) ? n : 0
+}
+
+/** Sum decor costs for display */
+function sumDecorCosts(decorItems: { cost: string }[]): number {
+  return decorItems.reduce((sum, item) => sum + parseCost(item.cost), 0)
+}
+
+export function BudgetPage() {
+  const { state, dispatch } = useParty()
+  const [draft, setDraft] = useState({
+    label: '',
+    category: 'decor' as BudgetLineItem['category'],
+    amount: 0,
+    notes: '',
+  })
+
+  const manualTotal = state.budget.lineItems.reduce((sum, item) => sum + item.amount, 0)
+  const decorTotal = sumDecorCosts(state.decor.items)
+  const totalSpent = manualTotal + decorTotal
+  const limit = state.budget.limit ?? 0
+  const overBudget = limit > 0 && totalSpent > limit
+
+  const addLineItem = () => {
+    if (!draft.label.trim() && draft.amount <= 0) return
+    dispatch({
+      type: 'update_budget',
+      payload: {
+        lineItems: [
+          ...state.budget.lineItems,
+          {
+            id: uuid(),
+            label: draft.label.trim() || 'Misc',
+            category: draft.category,
+            amount: draft.amount,
+            notes: draft.notes.trim() || undefined,
+          },
+        ],
+      },
+    })
+    setDraft({ label: '', category: 'decor', amount: 0, notes: '' })
+  }
+
+  const removeLineItem = (id: string) => {
+    dispatch({
+      type: 'update_budget',
+      payload: {
+        lineItems: state.budget.lineItems.filter((item) => item.id !== id),
+      },
+    })
+  }
+
+  const updateLineItem = (
+    id: string,
+    updates: Partial<BudgetLineItem>,
+  ) => {
+    dispatch({
+      type: 'update_budget',
+      payload: {
+        lineItems: state.budget.lineItems.map((item) =>
+          item.id === id ? { ...item, ...updates } : item,
+        ),
+      },
+    })
+  }
+
+  return (
+    <div className="space-y-6 pb-20 md:pb-0">
+      <h2 className="text-2xl font-semibold text-white">Budget</h2>
+      <p className="text-sm text-slate-300">
+        Track costs per category. Decor costs are auto-included from the Decor module.
+      </p>
+
+      <Card>
+        <CardTitle>Totals</CardTitle>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl bg-white/5 p-4">
+            <p className="text-xs uppercase text-slate-400">Total spent</p>
+            <p className="text-2xl font-bold text-white">
+              ${totalSpent.toFixed(2)}
+            </p>
+            <p className="mt-2 text-xs text-slate-400">
+              Manual: ${manualTotal.toFixed(2)} · Decor: ${decorTotal.toFixed(2)}
+            </p>
+          </div>
+          <label className="text-sm text-slate-300">
+            Budget limit (optional)
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={state.budget.limit ?? ''}
+              onChange={(e) =>
+                dispatch({
+                  type: 'update_budget',
+                  payload: {
+                    limit: e.target.value ? Number(e.target.value) : undefined,
+                  },
+                })
+              }
+              className="mt-2"
+              placeholder="e.g. 500"
+            />
+            {overBudget && limit > 0 ? (
+              <p className="mt-2 text-sm text-rose-400">Over budget by ${(totalSpent - limit).toFixed(2)}</p>
+            ) : null}
+          </label>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Add line item</CardTitle>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-sm text-slate-300">
+            Label
+            <Input
+              value={draft.label}
+              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+              className="mt-2"
+              placeholder="Ice, cups, napkins"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Category
+            <Select
+              value={draft.category}
+              onChange={(e) =>
+                setDraft({ ...draft, category: e.target.value as BudgetLineItem['category'] })
+              }
+              className="mt-2"
+            >
+              <option value="decor">Decor</option>
+              <option value="food">Food</option>
+              <option value="drinks">Drinks</option>
+              <option value="venue">Venue</option>
+              <option value="supplies">Supplies</option>
+              <option value="other">Other</option>
+            </Select>
+          </label>
+          <label className="text-sm text-slate-300">
+            Amount ($)
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={draft.amount || ''}
+              onChange={(e) =>
+                setDraft({ ...draft, amount: Number(e.target.value) || 0 })
+              }
+              className="mt-2"
+              placeholder="24.99"
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Notes
+            <Input
+              value={draft.notes}
+              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+              className="mt-2"
+              placeholder="Optional"
+            />
+          </label>
+        </div>
+        <Button type="button" onClick={addLineItem} className="mt-4">
+          Add item
+        </Button>
+      </Card>
+
+      <Card>
+        <CardTitle>Line items</CardTitle>
+        {state.budget.lineItems.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">No line items yet. Add costs above.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {state.budget.lineItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Input
+                    value={item.label}
+                    onChange={(e) => updateLineItem(item.id, { label: e.target.value })}
+                    className="max-w-[200px]"
+                  />
+                  <Select
+                    value={item.category}
+                    onChange={(e) =>
+                      updateLineItem(item.id, {
+                        category: e.target.value as BudgetLineItem['category'],
+                      })
+                    }
+                    className="w-32"
+                  >
+                    <option value="decor">Decor</option>
+                    <option value="food">Food</option>
+                    <option value="drinks">Drinks</option>
+                    <option value="venue">Venue</option>
+                    <option value="supplies">Supplies</option>
+                    <option value="other">Other</option>
+                  </Select>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={item.amount || ''}
+                    onChange={(e) =>
+                      updateLineItem(item.id, { amount: Number(e.target.value) || 0 })
+                    }
+                    className="w-24"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => removeLineItem(item.id)}
+                  variant="outline"
+                  className="px-3 py-1 text-xs"
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
 
 export function InvitesPage() {
   const { state, dispatch } = useParty()
@@ -628,10 +863,58 @@ export function DrinksPage() {
     setExtraItem('')
   }
 
-  const removeExtraItem = (item: string) => {
+  const removeExtraItem = (index: number) => {
     dispatch({
       type: 'update_drinks',
-      payload: { extraItems: state.drinks.extraItems.filter((entry) => entry !== item) },
+      payload: {
+        extraItems: state.drinks.extraItems.filter((_, i) => i !== index),
+      },
+    })
+  }
+
+  const updateBaseItem = (key: ShoppingListBaseKey, text: string, resetIfEmpty = false) => {
+    const val = text.trim()
+    if (resetIfEmpty && !val) {
+      const { [key]: _, ...rest } = state.drinks.shoppingListOverrides ?? {}
+      dispatch({
+        type: 'update_drinks',
+        payload: { shoppingListOverrides: rest },
+      })
+      return
+    }
+    dispatch({
+      type: 'update_drinks',
+      payload: {
+        shoppingListOverrides: {
+          ...state.drinks.shoppingListOverrides,
+          [key]: val || text,
+        },
+      },
+    })
+  }
+
+  const updateExtraItem = (index: number, text: string, removeIfEmpty = false) => {
+    const trimmed = text.trim()
+    if (removeIfEmpty && !trimmed) {
+      removeExtraItem(index)
+      return
+    }
+    const next = [...state.drinks.extraItems]
+    next[index] = trimmed || text
+    dispatch({
+      type: 'update_drinks',
+      payload: { extraItems: next },
+    })
+  }
+
+  const hideBaseItem = (key: ShoppingListBaseKey) => {
+    const hidden = state.drinks.hiddenBaseItems ?? []
+    dispatch({
+      type: 'update_drinks',
+      payload: {
+        hiddenBaseItems: [...hidden, key],
+        shoppingListOverrides: { ...state.drinks.shoppingListOverrides, [key]: undefined },
+      },
     })
   }
 
@@ -676,16 +959,49 @@ export function DrinksPage() {
           </Button>
         </div>
         <ul className="mt-4 space-y-2 text-sm text-slate-300">
-          {state.drinks.shoppingList.map((item) => (
-            <li key={item} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-              <span>{item}</span>
-              {state.drinks.extraItems.includes(item) ? (
-                <Button variant="ghost" onClick={() => removeExtraItem(item)} className="text-xs">
+          {getShoppingListItems(state).map((entry) =>
+            entry.type === 'base' ? (
+              <li
+                key={entry.key}
+                className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2"
+              >
+                <Input
+                  value={entry.text}
+                  onChange={(e) => updateBaseItem(entry.key, e.target.value)}
+                  onBlur={(e) => updateBaseItem(entry.key, e.target.value, true)}
+                  className="flex-1 border-0 bg-transparent text-white placeholder:text-slate-500 focus-visible:ring-1"
+                  placeholder={entry.key}
+                />
+                <Button
+                  variant="ghost"
+                  onClick={() => hideBaseItem(entry.key)}
+                  className="text-xs shrink-0"
+                >
                   Remove
                 </Button>
-              ) : null}
-            </li>
-          ))}
+              </li>
+            ) : (
+              <li
+                key={`extra-${entry.index}`}
+                className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2"
+              >
+                <Input
+                  value={entry.text}
+                  onChange={(e) => updateExtraItem(entry.index, e.target.value)}
+                  onBlur={(e) => updateExtraItem(entry.index, e.target.value, true)}
+                  className="flex-1 border-0 bg-transparent text-white placeholder:text-slate-500 focus-visible:ring-1"
+                  placeholder="Item name"
+                />
+                <Button
+                  variant="ghost"
+                  onClick={() => removeExtraItem(entry.index)}
+                  className="text-xs shrink-0"
+                >
+                  Remove
+                </Button>
+              </li>
+            ),
+          )}
         </ul>
       </Card>
     </div>
@@ -933,6 +1249,22 @@ export function CleaningPage() {
     })
   }
 
+  const toggleChecklistStatus = (id: string) => {
+    dispatch({
+      type: 'update_cleaning',
+      payload: {
+        checklists: state.cleaning.checklists.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                status: (task.status === 'done' ? 'not_started' : 'done') as typeof task.status,
+              }
+            : task,
+        ),
+      },
+    })
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Cleaning & Bathroom</h3>
@@ -999,10 +1331,26 @@ export function CleaningPage() {
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {state.cleaning.checklists.map((task) => (
-              <div key={task.id} className="rounded-xl bg-white/5 px-4 py-3 text-sm">
-                <p className="font-semibold text-white">{task.label}</p>
-                <p className="text-xs uppercase text-slate-400">{task.phase}</p>
-              </div>
+              <Button
+                key={task.id}
+                type="button"
+                onClick={() => toggleChecklistStatus(task.id)}
+                variant="outline"
+                className={[
+                  'flex items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold',
+                  task.status === 'done' ? 'bg-emerald-500/20 text-emerald-200' : '',
+                ].join(' ')}
+                aria-pressed={task.status === 'done'}
+                aria-label={task.status === 'done' ? `Mark ${task.label} as not done` : `Mark ${task.label} as done`}
+              >
+                <div>
+                  <p className="text-white">{task.label}</p>
+                  <p className="text-xs uppercase text-slate-400">{task.phase}</p>
+                </div>
+                <span className="text-xs uppercase">
+                  {task.status === 'done' ? 'Done' : 'To do'}
+                </span>
+              </Button>
             ))}
           </div>
         )}
@@ -1599,6 +1947,13 @@ export function LivePage() {
     setNote('')
   }
 
+  const removeNote = (text: string) => {
+    dispatch({
+      type: 'update_live',
+      payload: { quickNotes: state.live.quickNotes.filter((n) => n !== text) },
+    })
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Live Party Mode</h3>
@@ -1643,8 +1998,19 @@ export function LivePage() {
         </div>
         <ul className="mt-4 space-y-2 text-sm text-slate-300">
           {state.live.quickNotes.map((entry) => (
-            <li key={entry} className="rounded-lg bg-white/5 px-3 py-2">
+            <li
+              key={entry}
+              className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
+            >
               {entry}
+              <Button
+                variant="ghost"
+                onClick={() => removeNote(entry)}
+                className="text-xs"
+                aria-label={`Remove note: ${entry}`}
+              >
+                Remove
+              </Button>
             </li>
           ))}
         </ul>
@@ -2049,10 +2415,51 @@ export function PhotoVideoPage() {
   )
 }
 
+const PLAYLIST_PHASES = [
+  { key: 'pregame' as const, label: 'Pregame' },
+  { key: 'arrival' as const, label: 'Arrival' },
+  { key: 'peak' as const, label: 'Peak' },
+  { key: 'late' as const, label: 'Late' },
+  { key: 'windDown' as const, label: 'Wind down' },
+]
+
 export function PostPartyPage() {
   const { state, dispatch } = useParty()
   const [cleanupItem, setCleanupItem] = useState('')
   const [leftoverItem, setLeftoverItem] = useState('')
+
+  const toggleFavoriteDrink = (drinkId: string) => {
+    const favs = state.postParty.favorites.drinks
+    const next = favs.includes(drinkId)
+      ? favs.filter((id) => id !== drinkId)
+      : [...favs, drinkId]
+    dispatch({
+      type: 'update_post_party',
+      payload: { favorites: { ...state.postParty.favorites, drinks: next } },
+    })
+  }
+
+  const toggleFavoriteGame = (gameId: string) => {
+    const favs = state.postParty.favorites.games
+    const next = favs.includes(gameId)
+      ? favs.filter((id) => id !== gameId)
+      : [...favs, gameId]
+    dispatch({
+      type: 'update_post_party',
+      payload: { favorites: { ...state.postParty.favorites, games: next } },
+    })
+  }
+
+  const toggleFavoritePlaylist = (phase: string) => {
+    const favs = state.postParty.favorites.playlists
+    const next = favs.includes(phase)
+      ? favs.filter((p) => p !== phase)
+      : [...favs, phase]
+    dispatch({
+      type: 'update_post_party',
+      payload: { favorites: { ...state.postParty.favorites, playlists: next } },
+    })
+  }
 
   const addCleanup = () => {
     if (!cleanupItem.trim()) return
@@ -2070,6 +2477,22 @@ export function PostPartyPage() {
       payload: { leftovers: [...state.postParty.leftovers, leftoverItem.trim()] },
     })
     setLeftoverItem('')
+  }
+
+  const removeCleanup = (item: string) => {
+    dispatch({
+      type: 'update_post_party',
+      payload: {
+        cleanupChecklist: state.postParty.cleanupChecklist.filter((i) => i !== item),
+      },
+    })
+  }
+
+  const removeLeftover = (item: string) => {
+    dispatch({
+      type: 'update_post_party',
+      payload: { leftovers: state.postParty.leftovers.filter((i) => i !== item) },
+    })
   }
 
   return (
@@ -2092,8 +2515,19 @@ export function PostPartyPage() {
         </div>
         <ul className="mt-4 space-y-2 text-sm text-slate-300">
           {state.postParty.cleanupChecklist.map((item) => (
-            <li key={item} className="rounded-lg bg-white/5 px-3 py-2">
+            <li
+              key={item}
+              className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
+            >
               {item}
+              <Button
+                variant="ghost"
+                onClick={() => removeCleanup(item)}
+                className="text-xs"
+                aria-label={`Remove ${item}`}
+              >
+                Remove
+              </Button>
             </li>
           ))}
         </ul>
@@ -2114,11 +2548,109 @@ export function PostPartyPage() {
         </div>
         <ul className="mt-4 space-y-2 text-sm text-slate-300">
           {state.postParty.leftovers.map((item) => (
-            <li key={item} className="rounded-lg bg-white/5 px-3 py-2">
+            <li
+              key={item}
+              className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
+            >
               {item}
+              <Button
+                variant="ghost"
+                onClick={() => removeLeftover(item)}
+                className="text-xs"
+                aria-label={`Remove ${item}`}
+              >
+                Remove
+              </Button>
             </li>
           ))}
         </ul>
+      </Card>
+
+      <Card>
+        <CardTitle>Favorites</CardTitle>
+        <p className="mt-2 text-sm text-slate-400">
+          Mark what worked so you can reuse it next time.
+        </p>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="mb-2 text-xs uppercase text-slate-400">Drinks</p>
+            <div className="flex flex-wrap gap-2">
+              {state.drinks.suggestions.map((drink) => {
+                const isFav = state.postParty.favorites.drinks.includes(drink.id)
+                return (
+                  <Button
+                    key={drink.id}
+                    type="button"
+                    variant="outline"
+                    onClick={() => toggleFavoriteDrink(drink.id)}
+                    className={
+                      isFav ? 'bg-emerald-500/20 text-emerald-200' : ''
+                    }
+                    aria-pressed={isFav}
+                    aria-label={isFav ? `Remove ${drink.name} from favorites` : `Add ${drink.name} to favorites`}
+                  >
+                    {drink.name}
+                  </Button>
+                )
+              })}
+              {state.drinks.suggestions.length === 0 ? (
+                <span className="text-sm text-slate-500">Add drinks in Drinks hub first.</span>
+              ) : null}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs uppercase text-slate-400">Games</p>
+            <div className="flex flex-wrap gap-2">
+              {state.games.games.map((game) => {
+                const isFav = state.postParty.favorites.games.includes(game.id)
+                return (
+                  <Button
+                    key={game.id}
+                    type="button"
+                    variant="outline"
+                    onClick={() => toggleFavoriteGame(game.id)}
+                    className={
+                      isFav ? 'bg-emerald-500/20 text-emerald-200' : ''
+                    }
+                    aria-pressed={isFav}
+                    aria-label={isFav ? `Remove ${game.name} from favorites` : `Add ${game.name} to favorites`}
+                  >
+                    {game.name}
+                  </Button>
+                )
+              })}
+              {state.games.games.length === 0 ? (
+                <span className="text-sm text-slate-500">Add games in Games hub first.</span>
+              ) : null}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs uppercase text-slate-400">Playlists</p>
+            <div className="flex flex-wrap gap-2">
+              {PLAYLIST_PHASES.map(({ key, label }) => {
+                const isFav = state.postParty.favorites.playlists.includes(key)
+                return (
+                  <Button
+                    key={key}
+                    type="button"
+                    variant="outline"
+                    onClick={() => toggleFavoritePlaylist(key)}
+                    className={
+                      isFav ? 'bg-emerald-500/20 text-emerald-200' : ''
+                    }
+                    aria-pressed={isFav}
+                    aria-label={isFav ? `Remove ${label} from favorites` : `Add ${label} to favorites`}
+                  >
+                    {label}
+                  </Button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       </Card>
 
       <Card>

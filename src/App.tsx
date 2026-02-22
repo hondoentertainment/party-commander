@@ -5,6 +5,7 @@ import { ModuleGuard } from './components/ModuleGuard'
 import { AdminPage } from './pages/AdminPage'
 import { Dashboard } from './pages/Dashboard'
 import {
+  BudgetPage,
   CleaningPage,
   DecorPage,
   DrinksPage,
@@ -29,6 +30,7 @@ function App() {
         <Route element={<ModuleGuard />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/budget" element={<BudgetPage />} />
           <Route path="/invites" element={<InvitesPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/leads" element={<LeadsPage />} />

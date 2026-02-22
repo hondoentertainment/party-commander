@@ -1,4 +1,10 @@
-import type { DrinkSuggestion, PartyState, Theme, TimelineTask } from './types'
+import type {
+  DrinkSuggestion,
+  PartyState,
+  ShoppingListBaseKey,
+  Theme,
+  TimelineTask,
+} from './types'
 
 const themeDrinks: Record<Theme, DrinkSuggestion[]> = {
   Classic: [
@@ -88,14 +94,38 @@ export function buildTimelineTasks(): TimelineTask[] {
   ]
 }
 
-export function buildShoppingList(state: PartyState): string[] {
+const BASE_KEYS: ShoppingListBaseKey[] = ['ice', 'cups', 'napkins']
+
+export type ShoppingListItem =
+  | { type: 'base'; key: ShoppingListBaseKey; text: string }
+  | { type: 'extra'; text: string; index: number }
+
+/** Returns shopping list items with metadata for editing (base vs extra). */
+export function getShoppingListItems(state: PartyState): ShoppingListItem[] {
   const guestCount = Math.max(0, state.invites.guestCount)
-  const base = [
-    `Ice (${Math.ceil(guestCount * 0.5)} bags)`,
-    `Cups (${Math.ceil(guestCount * 1.5)} units)`,
-    `Napkins (${Math.ceil(guestCount * 1.5)} units)`,
-  ]
-  return [...base, ...state.drinks.extraItems]
+  const overrides = state.drinks.shoppingListOverrides ?? {}
+  const hidden = new Set(state.drinks.hiddenBaseItems ?? [])
+
+  const defaults: Record<ShoppingListBaseKey, string> = {
+    ice: `Ice (${Math.ceil(guestCount * 0.5)} bags)`,
+    cups: `Cups (${Math.ceil(guestCount * 1.5)} units)`,
+    napkins: `Napkins (${Math.ceil(guestCount * 1.5)} units)`,
+  }
+
+  const baseItems: ShoppingListItem[] = BASE_KEYS.filter((key) => !hidden.has(key)).map(
+    (key) => ({ type: 'base' as const, key, text: overrides[key] ?? defaults[key] }),
+  )
+  const extraItems: ShoppingListItem[] = state.drinks.extraItems.map((text, index) => ({
+    type: 'extra' as const,
+    text,
+    index,
+  }))
+
+  return [...baseItems, ...extraItems]
+}
+
+export function buildShoppingList(state: PartyState): string[] {
+  return getShoppingListItems(state).map((item) => item.text)
 }
 
 export function applyEngines(state: PartyState): PartyState {
