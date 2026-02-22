@@ -1,4 +1,11 @@
-import { differenceInHours, differenceInMinutes, differenceInDays, parseISO } from 'date-fns'
+import {
+  compareAsc,
+  differenceInHours,
+  differenceInMinutes,
+  differenceInDays,
+  isAfter,
+  parseISO,
+} from 'date-fns'
 import { SectionHeader } from '../components/SectionHeader'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -64,6 +71,14 @@ export function Dashboard() {
   const liveAlerts = Object.values(state.live.restockAlerts).filter(Boolean).length
   const liveLabel = liveAlerts === 0 ? 'Smooth sailing' : 'Restock needed'
   const readinessPercent = Math.round((readyCount / readiness.length) * 100)
+  const now = new Date()
+  const upcomingEvents = state.events.items
+    .filter((event) => event.date)
+    .map((event) => ({ ...event, parsed: parseISO(event.date) }))
+    .filter((event) => isAfter(event.parsed, now))
+    .sort((a, b) => compareAsc(a.parsed, b.parsed))
+  const nextEvent = upcomingEvents[0]
+  const archivedEvents = state.events.items.filter((event) => event.date).length - upcomingEvents.length
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -145,6 +160,28 @@ export function Dashboard() {
       />
 
       <section className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardTitle>Next Event</CardTitle>
+          {nextEvent ? (
+            <div className="mt-4 space-y-2 text-sm text-slate-300">
+              <p className="text-lg font-semibold text-white">{nextEvent.name}</p>
+              <p>{nextEvent.date}</p>
+              <p>{nextEvent.location}</p>
+              {nextEvent.link ? (
+                <Button
+                  className="mt-2"
+                  onClick={() => window.open(nextEvent.link, '_blank')}
+                >
+                  Open event link
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-400">No upcoming events yet.</p>
+          )}
+          <p className="mt-4 text-xs text-slate-500">Archived events: {Math.max(0, archivedEvents)}</p>
+        </Card>
+
         <Card>
           <CardTitle>Readiness Badges</CardTitle>
           <div className="mt-4 rounded-full bg-white/5 p-2">

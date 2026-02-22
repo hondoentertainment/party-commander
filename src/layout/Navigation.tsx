@@ -15,6 +15,7 @@ import {
 const navItems = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/invites', label: 'Invites', icon: Users },
+  { to: '/events', label: 'Events', icon: CalendarClock },
   { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/drinks', label: 'Drinks', icon: Sparkles },
   { to: '/decor', label: 'Decor', icon: Wand2 },

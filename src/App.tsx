@@ -6,6 +6,7 @@ import {
   CleaningPage,
   DecorPage,
   DrinksPage,
+  EventsPage,
   EntryPage,
   GamesPage,
   InvitesPage,
@@ -23,6 +24,7 @@ function App() {
       <Route element={<AppShell />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/invites" element={<InvitesPage />} />
+        <Route path="/events" element={<EventsPage />} />
         <Route path="/menu" element={<MenuPage />} />
         <Route path="/drinks" element={<DrinksPage />} />
         <Route path="/decor" element={<DecorPage />} />

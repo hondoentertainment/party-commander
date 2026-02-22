@@ -11,13 +11,16 @@ export const defaultPartyState: PartyState = {
     location: '',
   },
   invites: {
-    partifulLink: '',
+    partifulLink: 'https://partiful.com/e/7prpqOz68SjhM3qC4Cdk?c=09OfrcKm',
     guestCount: 0,
     messageTemplates: {
       arrival: 'Doors open at 7. Buzz in when you arrive.',
       music: 'Add your favorite song here: [playlist link]',
       rooftop: 'Rooftop rules: keep noise down after 10.',
     },
+  },
+  events: {
+    items: [],
   },
   menu: {
     items: [],

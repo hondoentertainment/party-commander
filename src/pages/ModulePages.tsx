@@ -172,6 +172,153 @@ export function InvitesPage() {
   )
 }
 
+export function EventsPage() {
+  const { state, dispatch } = useParty()
+  const [draft, setDraft] = useState({
+    name: '',
+    date: '',
+    location: '',
+    link: '',
+    notes: '',
+  })
+
+  const addEvent = () => {
+    if (!draft.name.trim()) return
+    dispatch({
+      type: 'update_events',
+      payload: {
+        items: [
+          ...state.events.items,
+          { id: uuid(), ...draft, name: draft.name.trim() },
+        ],
+      },
+    })
+    setDraft({ name: '', date: '', location: '', link: '', notes: '' })
+  }
+
+  const updateEvent = (id: string, updates: Partial<(typeof state.events.items)[0]>) => {
+    dispatch({
+      type: 'update_events',
+      payload: {
+        items: state.events.items.map((event) => (event.id === id ? { ...event, ...updates } : event)),
+      },
+    })
+  }
+
+  const removeEvent = (id: string) => {
+    dispatch({
+      type: 'update_events',
+      payload: { items: state.events.items.filter((event) => event.id !== id) },
+    })
+  }
+
+  return (
+    <div className="space-y-6 pb-20 md:pb-0">
+      <h3 className="text-2xl font-semibold text-white">Events</h3>
+      <p className="text-sm text-slate-300">Add upcoming events and keep an archive.</p>
+
+      <Card>
+        <CardTitle>Add event</CardTitle>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-sm text-slate-300">
+            Event name
+            <Input
+              value={draft.name}
+              onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+              className="mt-2"
+              placeholder="Rooftop kickoff"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Date & time
+            <Input
+              type="datetime-local"
+              value={draft.date}
+              onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+              className="mt-2"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Location
+            <Input
+              value={draft.location}
+              onChange={(event) => setDraft({ ...draft, location: event.target.value })}
+              className="mt-2"
+              placeholder="My apartment"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Link
+            <Input
+              value={draft.link}
+              onChange={(event) => setDraft({ ...draft, link: event.target.value })}
+              className="mt-2"
+              placeholder="https://partiful.com/..."
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Notes
+            <Textarea
+              value={draft.notes}
+              onChange={(event) => setDraft({ ...draft, notes: event.target.value })}
+              rows={3}
+              className="mt-2"
+            />
+          </label>
+        </div>
+        <Button type="button" onClick={addEvent} className="mt-4">
+          Add event
+        </Button>
+      </Card>
+
+      <Card>
+        <CardTitle>Event list</CardTitle>
+        {state.events.items.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">No events yet.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {state.events.items.map((event) => (
+              <div key={event.id} className="rounded-xl bg-white/5 px-4 py-3 text-sm">
+                <div className="grid gap-2 md:grid-cols-2">
+                  <Input
+                    value={event.name}
+                    onChange={(e) => updateEvent(event.id, { name: e.target.value })}
+                  />
+                  <Input
+                    type="datetime-local"
+                    value={event.date}
+                    onChange={(e) => updateEvent(event.id, { date: e.target.value })}
+                  />
+                  <Input
+                    value={event.location}
+                    onChange={(e) => updateEvent(event.id, { location: e.target.value })}
+                    placeholder="Location"
+                  />
+                  <Input
+                    value={event.link}
+                    onChange={(e) => updateEvent(event.id, { link: e.target.value })}
+                    placeholder="Link"
+                  />
+                  <Textarea
+                    value={event.notes}
+                    onChange={(e) => updateEvent(event.id, { notes: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button variant="outline" onClick={() => removeEvent(event.id)}>
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 export function MenuPage() {
   const { state, dispatch } = useParty()
   const [draft, setDraft] = useState({

@@ -8,6 +8,7 @@ type PartyAction =
   | { type: 'set_state'; payload: PartyState }
   | { type: 'update_core'; payload: Partial<PartyState['core']> }
   | { type: 'update_invites'; payload: Partial<PartyState['invites']> }
+  | { type: 'update_events'; payload: Partial<PartyState['events']> }
   | { type: 'update_music'; payload: Partial<PartyState['music']> }
   | { type: 'update_menu'; payload: Partial<PartyState['menu']> }
   | { type: 'update_drinks'; payload: Partial<PartyState['drinks']> }
@@ -28,6 +29,8 @@ function reducer(state: PartyState, action: PartyAction): PartyState {
       return applyEngines({ ...state, core: { ...state.core, ...action.payload } })
     case 'update_invites':
       return applyEngines({ ...state, invites: { ...state.invites, ...action.payload } })
+    case 'update_events':
+      return applyEngines({ ...state, events: { ...state.events, ...action.payload } })
     case 'update_music':
       return applyEngines({ ...state, music: { ...state.music, ...action.payload } })
     case 'update_menu':

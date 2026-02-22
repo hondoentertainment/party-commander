@@ -176,6 +176,9 @@ export interface PostPartyState {
 export interface PartyState {
   core: PartyCore
   invites: Invites
+  events: {
+    items: PartyEvent[]
+  }
   menu: MenuState
   drinks: DrinksState
   decor: DecorState
@@ -187,4 +190,13 @@ export interface PartyState {
   entry: EntryState
   live: LiveState
   postParty: PostPartyState
+}
+
+export interface PartyEvent {
+  id: string
+  name: string
+  date: string
+  location: string
+  link: string
+  notes: string
 }
