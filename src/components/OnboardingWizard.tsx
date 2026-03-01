@@ -19,7 +19,8 @@ export function OnboardingWizard() {
     const [currentStep, setCurrentStep] = useState(0)
     const [creating, setCreating] = useState(false)
 
-    if (state.core.name && (!partyProfile || parties?.length > 0)) return null
+    // Show when: no party yet (new user or no parties created)
+    if (partyProfile && parties && parties.length > 0) return null
 
     const next = () => {
         if (currentStep < steps.length - 1) {

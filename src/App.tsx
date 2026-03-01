@@ -55,6 +55,7 @@ function App() {
             <Route path="/photo-video" element={<PhotoVideoPage />} />
             <Route path="/post-party" element={<PostPartyPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>
       </Route>

@@ -18,8 +18,8 @@ import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
 import type { Theme } from '../state/types'
 import { SwarmConsole } from '../components/SwarmConsole'
+import { AIAssistant } from '../components/AIAssistant'
 import { OnboardingWizard } from '../components/OnboardingWizard'
-import { supabase } from '../services/auth'
 import { ShieldCheck } from 'lucide-react'
 
 const themes: Theme[] = [
@@ -134,11 +134,8 @@ export function Dashboard() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="rounded-2xl px-8 shadow-lg shadow-emerald-500/20">
-                Quick Action
-              </Button>
               <Link to="/timeline">
-                <Button variant="outline" size="lg" className="rounded-2xl px-8">
+                <Button size="lg" className="rounded-2xl px-8 shadow-lg shadow-emerald-500/20">
                   View Timeline
                 </Button>
               </Link>
@@ -193,7 +190,10 @@ export function Dashboard() {
           title="Swarm Intelligence"
           subtitle="Autonomous agents collaborating on zero-friction event logic."
         />
-        <SwarmConsole />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SwarmConsole />
+          <AIAssistant />
+        </div>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -258,23 +258,6 @@ export function Dashboard() {
                     <span className="text-[11px] font-bold uppercase tracking-tight">{item.label}</span>
                   </div>
                 ))}
-              </div>
-            </Card>
-
-            <Card className="border-rose-500/10 bg-rose-500/5 mt-8">
-              <div className="p-6 flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-bold text-rose-400">Security Terminal</h4>
-                  <p className="text-[10px] text-slate-500">Operator Identity: {state.auth.user?.email}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => supabase.auth.signOut()}
-                  className="text-rose-400 hover:bg-rose-500/10"
-                >
-                  Logout
-                </Button>
               </div>
             </Card>
           </div>

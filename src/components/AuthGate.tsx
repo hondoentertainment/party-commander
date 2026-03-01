@@ -96,6 +96,7 @@ export function AuthGate() {
     const [authMethod, setAuthMethod] = useState<'password' | 'magic' | null>(null)
     const [magicLinkSent, setMagicLinkSent] = useState(false)
     const [emailConfirmationSent, setEmailConfirmationSent] = useState(false)
+    const [demoLoading, setDemoLoading] = useState(false)
 
     if (!state.auth.initialized) {
         return (
@@ -153,8 +154,17 @@ export function AuthGate() {
         }
     }
 
-    const handleSimulate = () => {
-        supabase.auth.signInWithPassword({ email: 'demo@party.com', password: 'password' })
+    const handleSimulate = async () => {
+        setDemoLoading(true)
+        setError(null)
+        try {
+            const { error } = await supabase.auth.signInWithPassword({ email: 'demo@party.com', password: 'password' })
+            if (error) throw error
+        } catch {
+            setError('Demo account not available. Sign up or use magic link.')
+        } finally {
+            setDemoLoading(false)
+        }
     }
 
     const showPasswordForm = authMethod === 'password' || (!authMethod && !magicLinkSent && !emailConfirmationSent)
@@ -367,9 +377,10 @@ export function AuthGate() {
                             <button
                                 type="button"
                                 onClick={handleSimulate}
-                                className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-400 transition-colors"
+                                disabled={demoLoading}
+                                className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
                             >
-                                <Sparkles className="size-3" />
+                                {demoLoading ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                                 Quick demo
                             </button>
                         </div>

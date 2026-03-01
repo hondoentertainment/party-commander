@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Loader2, Shield, Zap, Heart, Music, CheckCircle2 } from 'lucide-react'
 import { Card } from './ui/Card'
@@ -6,6 +7,31 @@ import { Button } from './ui/Button'
 import { runSwarmAnalysis, type AgentResponse, type AgentRole } from '../services/swarm'
 import { useParty } from '../state/PartyContext'
 import { cn } from './ui/utils'
+
+/** Map action text to a route; falls back to /timeline for generic items */
+function getRouteForAction(action: string): string {
+  const lower = action.toLowerCase()
+  const mappings: { keywords: string[]; route: string }[] = [
+    { keywords: ['drink', 'cocktail', 'beverage', 'bar'], route: '/drinks' },
+    { keywords: ['food', 'menu', 'catering'], route: '/food' },
+    { keywords: ['budget', 'cost', 'spend'], route: '/budget' },
+    { keywords: ['invite', 'guest', 'rsvp'], route: '/invites' },
+    { keywords: ['decor', 'decoration', 'theme'], route: '/decor' },
+    { keywords: ['music', 'playlist'], route: '/music' },
+    { keywords: ['game'], route: '/games' },
+    { keywords: ['venue', 'space', 'location'], route: '/venue' },
+    { keywords: ['entry', 'access', 'door'], route: '/entry' },
+    { keywords: ['event'], route: '/events' },
+    { keywords: ['lead', 'assign'], route: '/leads' },
+    { keywords: ['clean', 'supply', 'bathroom'], route: '/cleaning' },
+    { keywords: ['photo', 'video', 'shot'], route: '/photo-video' },
+    { keywords: ['post', 'wrap', 'cleanup'], route: '/post-party' },
+  ]
+  for (const { keywords, route } of mappings) {
+    if (keywords.some((k) => lower.includes(k))) return route
+  }
+  return '/timeline'
+}
 
 const ROLE_ICONS: Record<AgentRole, any> = {
     Logistician: Shield,
@@ -87,12 +113,19 @@ export function SwarmConsole() {
                                     </p>
 
                                     <div className="mt-auto space-y-2">
-                                        {agent.actionable?.map((action, i) => (
-                                            <div key={i} className="flex items-start gap-2 group cursor-pointer">
-                                                <CheckCircle2 className="size-3 mt-0.5 opacity-40 group-hover:opacity-100 group-hover:text-emerald-400 transition-all" />
-                                                <span className="text-[10px] leading-tight text-slate-400 group-hover:text-white transition-colors">{action}</span>
-                                            </div>
-                                        ))}
+                                        {agent.actionable?.map((action, i) => {
+                                            const route = getRouteForAction(action)
+                                            return (
+                                                <Link
+                                                    key={i}
+                                                    to={route}
+                                                    className="flex items-start gap-2 group cursor-pointer"
+                                                >
+                                                    <CheckCircle2 className="size-3 mt-0.5 opacity-40 group-hover:opacity-100 group-hover:text-emerald-400 transition-all shrink-0" />
+                                                    <span className="text-[10px] leading-tight text-slate-400 group-hover:text-white transition-colors">{action}</span>
+                                                </Link>
+                                            )
+                                        })}
                                     </div>
                                 </motion.div>
                             )

@@ -15,7 +15,7 @@ export const defaultPartyState: PartyState = {
     limit: undefined,
   },
   invites: {
-    partifulLink: 'https://partiful.com/e/7prpqOz68SjhM3qC4Cdk?c=09OfrcKm',
+    partifulLink: '',
     guestCount: 0,
     messageTemplates: {
       arrival: 'Doors open at 7. Buzz in when you arrive.',
@@ -172,6 +172,7 @@ export const defaultPartyState: PartyState = {
       live: true,
       photo_video: true,
       post_party: true,
+      profile: true,
       admin: true,
     },
   },
