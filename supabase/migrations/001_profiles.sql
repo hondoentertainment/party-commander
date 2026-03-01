@@ -22,7 +22,7 @@ create policy "Users can insert own profile"
     on public.profiles for insert
     with check (auth.uid() = id);
 
--- Auto-create profile on signup (supports Google avatar/name from metadata)
+-- Auto-create profile on signup
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql

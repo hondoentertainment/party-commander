@@ -25,14 +25,19 @@ export const AuthService = {
         )
     },
 
-    async signInWithGoogle() {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
+    async signUp(email: string, password: string) {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
             options: {
-                redirectTo: getAuthRedirectUrl(),
+                emailRedirectTo: getAuthRedirectUrl(),
             },
         })
-        return { error }
+        return { data, error }
+    },
+
+    async signInWithPassword(email: string, password: string) {
+        return await supabase.auth.signInWithPassword({ email, password })
     },
 
     async signInWithMagicLink(email: string) {
