@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Party Planning App', () => {
   test('loads home page and shows party command center', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: /plan, run, and wrap/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Party Command|My Party/i })).toBeVisible()
   })
 
   test('can navigate to Budget page', async ({ page }) => {

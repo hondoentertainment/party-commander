@@ -1,14 +1,16 @@
 import { useRef, useState } from 'react'
 import { useParty } from '../state/PartyContext'
+import { cn } from '../components/ui/utils'
 import { v4 as uuid } from 'uuid'
 import { Button } from '../components/ui/Button'
 import { Card, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Textarea } from '../components/ui/Textarea'
-import { Download, ImagePlus, Trash2 } from 'lucide-react'
+import { Download, ImagePlus, Trash2, Sparkles, Loader2, Lightbulb, RotateCcw } from 'lucide-react'
 import { getShoppingListItems } from '../state/engines'
-import type { GalleryPhoto, ShoppingListBaseKey } from '../state/types'
+import { generateBudgetOptimization } from '../services/ai'
+import type { DrinkSuggestion, GalleryPhoto, ShoppingListBaseKey } from '../state/types'
 import type { BudgetLineItem } from '../state/types'
 
 /** Parse dollar amount from string like "$24" or "24.50" */
@@ -25,6 +27,8 @@ function sumDecorCosts(decorItems: { cost: string }[]): number {
 
 export function BudgetPage() {
   const { state, dispatch } = useParty()
+  const [loading, setLoading] = useState(false)
+  const [tips, setTips] = useState<string[] | null>(null)
   const [draft, setDraft] = useState({
     label: '',
     category: 'decor' as BudgetLineItem['category'],
@@ -37,6 +41,18 @@ export function BudgetPage() {
   const totalSpent = manualTotal + decorTotal
   const limit = state.budget.limit ?? 0
   const overBudget = limit > 0 && totalSpent > limit
+
+  const handleOptimize = async () => {
+    setLoading(true)
+    try {
+      const result = await generateBudgetOptimization(state.budget.lineItems, state.budget.limit)
+      setTips(result || ['AI Analysis failed. Please try again.'])
+    } catch (e) {
+      setTips(['An unexpected error occurred.'])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const addLineItem = () => {
     if (!draft.label.trim() && draft.amount <= 0) return
@@ -85,7 +101,7 @@ export function BudgetPage() {
     <div className="space-y-6 pb-20 md:pb-0">
       <h2 className="text-2xl font-semibold text-white">Budget</h2>
       <p className="text-sm text-slate-300">
-        Track costs per category. Decor costs are auto-included from the Decor module.
+        Track costs per category. Decor costs are automatically synced from the Decor module.
       </p>
 
       <Card>
@@ -123,6 +139,39 @@ export function BudgetPage() {
             ) : null}
           </label>
         </div>
+      </Card>
+
+      <Card className="border-emerald-500/10 bg-emerald-500/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              <Sparkles className="size-5 text-emerald-400" />
+            </div>
+            <div>
+              <CardTitle>AI Optimizer</CardTitle>
+              <p className="text-xs text-slate-400">Get world-class savings strategies.</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleOptimize}
+            disabled={loading || state.budget.lineItems.length === 0}
+            className="rounded-xl"
+          >
+            {loading ? <Loader2 className="size-4 animate-spin" /> : 'Analyze Budget'}
+          </Button>
+        </div>
+
+        {tips && (
+          <div className="mt-6 space-y-3">
+            {tips.map((tip, i) => (
+              <div key={i} className="flex gap-3 rounded-xl bg-black/40 p-4 text-sm text-slate-300 border border-white/5 transition-all hover:bg-black/60 group">
+                <Lightbulb className="size-5 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+                <span>{tip}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card>
@@ -358,9 +407,9 @@ export function InvitesPage() {
         <div className="mt-4 space-y-4">
           {(['arrival', 'music', 'rooftop'] as const).map((key) => (
             <label key={key} className="block text-sm text-slate-300">
-              {key === 'arrival' && 'Arrival instructions'}
-              {key === 'music' && 'Music share link'}
-              {key === 'rooftop' && 'Rooftop details'}
+              {key === 'arrival' && 'Arrival instructions (e.g. Buzz code)'}
+              {key === 'music' && 'Music share link (Spotify/Apple Music)'}
+              {key === 'rooftop' && 'Rooftop details (Rules & Access)'}
               <div className="mt-2 flex gap-2">
                 <Textarea
                   value={state.invites.messageTemplates[key]}
@@ -728,7 +777,7 @@ export function MenuPage() {
               <option value="snacks">Snacks</option>
               <option value="mains">Mains</option>
               <option value="dessert">Dessert</option>
-              <option value="late_night">Late-night</option>
+              <option value="late_night">Late-night snacks</option>
             </Select>
           </label>
           <label className="text-sm text-slate-300">
@@ -853,6 +902,61 @@ export function MenuPage() {
 export function DrinksPage() {
   const { state, dispatch } = useParty()
   const [extraItem, setExtraItem] = useState('')
+  const customDrinks = state.drinks.customDrinks ?? []
+  const drinkOverrides = state.drinks.drinkOverrides ?? {}
+
+  const isCustomDrink = (drinkId: string) => customDrinks.some((d) => d.id === drinkId)
+  const hasOverride = (drinkId: string) => drinkId in drinkOverrides
+
+  const updateDrink = (drinkId: string, updates: Partial<DrinkSuggestion>) => {
+    if (isCustomDrink(drinkId)) {
+      const next = customDrinks.map((d) =>
+        d.id === drinkId ? { ...d, ...updates } : d,
+      )
+      dispatch({ type: 'update_drinks', payload: { customDrinks: next } })
+    } else {
+      dispatch({
+        type: 'update_drinks',
+        payload: {
+          drinkOverrides: {
+            ...drinkOverrides,
+            [drinkId]: { ...(drinkOverrides[drinkId] ?? {}), ...updates },
+          },
+        },
+      })
+    }
+  }
+
+  const addCustomDrink = () => {
+    dispatch({
+      type: 'update_drinks',
+      payload: {
+        customDrinks: [
+          ...customDrinks,
+          {
+            id: uuid(),
+            name: 'New Drink',
+            type: 'signature' as const,
+            ingredients: [],
+            prep: '',
+          } satisfies DrinkSuggestion,
+        ],
+      },
+    })
+  }
+
+  const removeCustomDrink = (drinkId: string) => {
+    if (!isCustomDrink(drinkId)) return
+    dispatch({
+      type: 'update_drinks',
+      payload: { customDrinks: customDrinks.filter((d) => d.id !== drinkId) },
+    })
+  }
+
+  const resetDrinkOverride = (drinkId: string) => {
+    const { [drinkId]: _, ...rest } = drinkOverrides
+    dispatch({ type: 'update_drinks', payload: { drinkOverrides: rest } })
+  }
 
   const addExtraItem = () => {
     if (!extraItem.trim()) return
@@ -927,22 +1031,93 @@ export function DrinksPage() {
 
       <Card>
         <CardTitle>Suggestions</CardTitle>
-        <ul className="mt-4 space-y-3 text-sm text-slate-300">
+        <p className="mt-1 text-sm text-slate-400">
+          Edit any drink to customize it. Add your own or reset theme drinks to default.
+        </p>
+        <div className="mt-4 space-y-3">
           {state.drinks.suggestions.map((drink) => (
-            <li key={drink.id} className="rounded-xl bg-white/5 px-4 py-3">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-white">{drink.name}</p>
-                <span className="rounded-full bg-white/10 px-2 py-1 text-xs uppercase text-slate-300">
-                  {drink.type}
-                </span>
+            <div
+              key={drink.id}
+              className="flex flex-wrap items-start justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
+            >
+              <div className="flex-1 space-y-2 min-w-0">
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    value={drink.name}
+                    onChange={(e) => updateDrink(drink.id, { name: e.target.value })}
+                    placeholder="Drink name"
+                    className="flex-1 min-w-[140px]"
+                  />
+                  <Select
+                    value={drink.type}
+                    onChange={(e) =>
+                      updateDrink(drink.id, {
+                        type: e.target.value as DrinkSuggestion['type'],
+                      })
+                    }
+                  >
+                    <option value="signature">Signature</option>
+                    <option value="batch">Batch</option>
+                    <option value="na">NA</option>
+                  </Select>
+                </div>
+                <Input
+                  value={drink.ingredients.join(', ')}
+                  onChange={(e) =>
+                    updateDrink(drink.id, {
+                      ingredients: e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  placeholder="Ingredients (comma-separated)"
+                  className="w-full"
+                />
+                <Input
+                  value={drink.prep}
+                  onChange={(e) => updateDrink(drink.id, { prep: e.target.value })}
+                  placeholder="Preparation notes"
+                  className="w-full"
+                />
               </div>
-              <p className="mt-2 text-xs text-slate-400">
-                {drink.ingredients.join(', ')}
-              </p>
-              <p className="mt-2 text-xs text-slate-400">{drink.prep}</p>
-            </li>
+              <div className="flex shrink-0 gap-1">
+                {hasOverride(drink.id) && !isCustomDrink(drink.id) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => resetDrinkOverride(drink.id)}
+                    className="px-2 py-1 text-xs"
+                    title="Reset to default"
+                    aria-label={`Reset ${drink.name} to default`}
+                  >
+                    <RotateCcw className="size-3.5" />
+                  </Button>
+                )}
+                {isCustomDrink(drink.id) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => removeCustomDrink(drink.id)}
+                    className="px-2 py-1 text-xs text-red-400 hover:text-red-300"
+                    title="Remove drink"
+                    aria-label={`Remove ${drink.name}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={addCustomDrink}
+          className="mt-4"
+        >
+          Add custom drink
+        </Button>
       </Card>
 
       <Card>
@@ -1256,9 +1431,9 @@ export function CleaningPage() {
         checklists: state.cleaning.checklists.map((task) =>
           task.id === id
             ? {
-                ...task,
-                status: (task.status === 'done' ? 'not_started' : 'done') as typeof task.status,
-              }
+              ...task,
+              status: (task.status === 'done' ? 'not_started' : 'done') as typeof task.status,
+            }
             : task,
         ),
       },
@@ -1503,16 +1678,62 @@ export function MusicPage() {
       <h3 className="text-2xl font-semibold text-white">Music Hub</h3>
       <p className="text-sm text-slate-300">Link playlists for each party phase.</p>
 
+      <Card className="relative overflow-hidden border-emerald-500/10 bg-emerald-500/5">
+        <div className="absolute -right-16 -top-16 size-48 rounded-full bg-emerald-500/10 blur-3xl" />
+        <CardTitle className="relative z-10 flex items-center gap-2">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/20">
+            <Sparkles className="size-4 text-emerald-400" />
+          </div>
+          Now Playing
+        </CardTitle>
+        <div className="relative z-10 mt-6 flex items-center gap-6">
+          <div className="relative size-24 shrink-0 overflow-hidden rounded-2xl bg-black/40 ring-1 ring-white/10">
+            <div className="absolute inset-x-0 bottom-0 flex h-16 items-center justify-center gap-1.5 p-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="w-1 rounded-full bg-emerald-500/60"
+                  style={{
+                    height: `${20 + Math.random() * 60}%`,
+                    animation: `pulseHeight ${0.5 + Math.random() * 1}s ease-in-out infinite alternate`,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/20 to-transparent" />
+          </div>
+          <div className="flex-1">
+            <p className="text-lg font-bold text-white">Sonic Atmosphere</p>
+            <p className="text-sm text-slate-400">Current Phase: {state.core.theme || 'Vibing'}</p>
+            <div className="mt-4 flex items-center gap-4">
+              <Button size="sm" variant="outline" className="rounded-xl border-white/5 bg-white/5">
+                Spotify Hub
+              </Button>
+              <div className="h-1 flex-1 rounded-full bg-white/5 overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-1000"
+                  style={{ width: '65%' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <Card>
-        <CardTitle>Main link</CardTitle>
-        <Input
-          value={state.music.mainLink}
-          onChange={(event) =>
-            dispatch({ type: 'update_music', payload: { mainLink: event.target.value } })
-          }
-          className="mt-3"
-          placeholder="https://open.spotify.com/..."
-        />
+        <CardTitle>Master Playlist Link</CardTitle>
+        <div className="mt-4 space-y-4">
+          <Input
+            value={state.music.mainLink}
+            onChange={(event) =>
+              dispatch({ type: 'update_music', payload: { mainLink: event.target.value } })
+            }
+            placeholder="https://open.spotify.com/..."
+          />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Link your master event playlist for one-tap access.
+          </p>
+        </div>
       </Card>
 
       <Card>
@@ -1966,19 +2187,47 @@ export function LivePage() {
         </p>
       </Card>
 
+      <Card className="border-emerald-500/10 bg-emerald-500/5">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+            <Sparkles className="size-5 text-emerald-400" />
+          </div>
+          <div>
+            <CardTitle>Operational Snapshot</CardTitle>
+            <p className="text-xs text-slate-400">Active playlist: {state.music.mainLink ? 'Connected' : 'Disconnected'}</p>
+          </div>
+        </div>
+      </Card>
+
       <Card>
-        <CardTitle>Restock alerts</CardTitle>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <CardTitle>Operational Alerts</CardTitle>
+        <p className="mt-2 text-sm text-slate-400">Tap to flag items that need immediate attention from the leads.</p>
+        <div className="mt-6 grid grid-cols-2 gap-4">
           {Object.entries(state.live.restockAlerts).map(([key, value]) => (
-            <Button
+            <button
               key={key}
-              type="button"
               onClick={() => toggleAlert(key as keyof typeof state.live.restockAlerts)}
-              variant="outline"
-              className={value ? 'bg-rose-500/20 text-rose-200' : 'bg-white/5 text-slate-300'}
+              className={cn(
+                'group relative flex flex-col items-center gap-3 rounded-[2rem] border p-6 transition-all duration-300 active:scale-95',
+                value
+                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.2)]'
+                  : 'border-white/5 bg-white/5 text-slate-400 hover:bg-white/10'
+              )}
             >
-              {key}
-            </Button>
+              <div className={cn(
+                'flex size-12 items-center justify-center rounded-2xl transition-all duration-300',
+                value ? 'bg-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'bg-black/40'
+              )}>
+                {key === 'ice' && '🧊'}
+                {key === 'cups' && '🥤'}
+                {key === 'mixers' && '🍹'}
+                {key === 'trash' && '🗑️'}
+              </div>
+              <span className="text-xs font-bold uppercase tracking-widest">{key}</span>
+              {value && (
+                <div className="absolute -right-1 -top-1 size-3 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-pulse" />
+              )}
+            </button>
           ))}
         </div>
       </Card>

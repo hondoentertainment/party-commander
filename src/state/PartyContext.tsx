@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer } from 'react'
+import { supabase } from '../services/auth'
 import { applyEngines } from './engines'
 import { defaultPartyState } from './defaults'
 import { loadState, saveState } from './storage'
@@ -24,6 +25,7 @@ type PartyAction =
   | { type: 'update_post_party'; payload: Partial<PartyState['postParty']> }
   | { type: 'update_photo_video'; payload: Partial<PartyState['photoVideo']> }
   | { type: 'update_admin'; payload: Partial<PartyState['admin']> }
+  | { type: 'update_auth'; payload: Partial<PartyState['auth']> }
 
 function reducer(state: PartyState, action: PartyAction): PartyState {
   switch (action.type) {
@@ -65,6 +67,8 @@ function reducer(state: PartyState, action: PartyAction): PartyState {
       return applyEngines({ ...state, photoVideo: { ...state.photoVideo, ...action.payload } })
     case 'update_admin':
       return applyEngines({ ...state, admin: { ...state.admin, ...action.payload } })
+    case 'update_auth':
+      return applyEngines({ ...state, auth: { ...state.auth, ...action.payload } })
     default:
       return state
   }
@@ -80,27 +84,27 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
     const stored = loadState()
     const merged = stored
       ? {
-          ...defaultPartyState,
-          ...stored,
-          budget: {
-            ...defaultPartyState.budget,
-            ...(stored.budget ?? {}),
-            lineItems: stored.budget?.lineItems ?? defaultPartyState.budget.lineItems,
+        ...defaultPartyState,
+        ...stored,
+        budget: {
+          ...defaultPartyState.budget,
+          ...(stored.budget ?? {}),
+          lineItems: stored.budget?.lineItems ?? defaultPartyState.budget.lineItems,
+        },
+        photoVideo: {
+          ...defaultPartyState.photoVideo,
+          ...stored.photoVideo,
+          photos: stored.photoVideo?.photos ?? defaultPartyState.photoVideo.photos,
+        },
+        admin: {
+          ...defaultPartyState.admin,
+          ...stored.admin,
+          modules: {
+            ...defaultPartyState.admin.modules,
+            ...(stored.admin?.modules ?? {}),
           },
-          photoVideo: {
-            ...defaultPartyState.photoVideo,
-            ...stored.photoVideo,
-            photos: stored.photoVideo?.photos ?? defaultPartyState.photoVideo.photos,
-          },
-          admin: {
-            ...defaultPartyState.admin,
-            ...stored.admin,
-            modules: {
-              ...defaultPartyState.admin.modules,
-              ...(stored.admin?.modules ?? {}),
-            },
-          },
-        }
+        },
+      }
       : defaultPartyState
     return applyEngines(merged)
   })
@@ -108,6 +112,14 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     saveState(state)
   }, [state])
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      dispatch({ type: 'update_auth', payload: { user: session?.user ?? null, initialized: true } })
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const value = useMemo(() => ({ state, dispatch }), [state])
 

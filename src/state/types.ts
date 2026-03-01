@@ -60,6 +60,10 @@ export interface DrinksState {
   shoppingListOverrides?: Partial<Record<ShoppingListBaseKey, string>>
   /** Base items to hide from the list */
   hiddenBaseItems?: ShoppingListBaseKey[]
+  /** Per-drink overrides (by id) - merges with theme suggestions */
+  drinkOverrides?: Partial<Record<string, Partial<DrinkSuggestion>>>
+  /** User-added custom drinks */
+  customDrinks?: DrinkSuggestion[]
 }
 
 export interface DecorItem {
@@ -242,6 +246,10 @@ export interface PartyState {
   postParty: PostPartyState
   photoVideo: PhotoVideoState
   admin: AdminState
+  auth: {
+    user: any | null
+    initialized: boolean
+  }
 }
 
 export interface LeadAssignment {

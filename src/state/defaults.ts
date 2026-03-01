@@ -19,7 +19,7 @@ export const defaultPartyState: PartyState = {
     guestCount: 0,
     messageTemplates: {
       arrival: 'Doors open at 7. Buzz in when you arrive.',
-      music: 'Add your favorite song here: [playlist link]',
+      music: 'Add your favorite song here:',
       rooftop: 'Rooftop rules: keep noise down after 10.',
     },
   },
@@ -30,6 +30,8 @@ export const defaultPartyState: PartyState = {
     items: [
       { id: 'budget', function: 'Budget', leadName: '' },
       { id: 'invites', function: 'Invites', leadName: '' },
+      { id: 'events', function: 'Events', leadName: '' },
+      { id: 'leads', function: 'Leads', leadName: '' },
       { id: 'menu', function: 'Menu', leadName: '' },
       { id: 'drinks', function: 'Drinks', leadName: '' },
       { id: 'decor', function: 'Decor & Ambience', leadName: '' },
@@ -40,7 +42,7 @@ export const defaultPartyState: PartyState = {
       { id: 'venue', function: 'Venue & Rooftop', leadName: '' },
       { id: 'entry', function: 'Entry Mode', leadName: '' },
       { id: 'live', function: 'Live Party', leadName: '' },
-      { id: 'post', function: 'Post-Party Wrap', leadName: '' },
+      { id: 'post_party', function: 'Post-Party Wrap', leadName: '' },
       { id: 'photo_video', function: 'Photo/Video Shoot', leadName: '' },
     ],
   },
@@ -53,6 +55,8 @@ export const defaultPartyState: PartyState = {
     extraItems: [],
     shoppingListOverrides: {},
     hiddenBaseItems: [],
+    drinkOverrides: {},
+    customDrinks: [],
   },
   decor: {
     items: [],
@@ -64,7 +68,7 @@ export const defaultPartyState: PartyState = {
       { id: 'soap', name: 'Hand soap', status: 'not_started' },
       { id: 'towels', name: 'Towels', status: 'not_started' },
       { id: 'liners', name: 'Trash liners', status: 'not_started' },
-      { id: 'freshener', name: 'Freshener', status: 'not_started' },
+      { id: 'freshener', name: 'Air Freshener', status: 'not_started' },
     ],
   },
   timeline: {
@@ -152,6 +156,7 @@ export const defaultPartyState: PartyState = {
   admin: {
     modules: {
       home: true,
+      profile: true,
       budget: true,
       invites: true,
       events: true,
@@ -170,5 +175,9 @@ export const defaultPartyState: PartyState = {
       post_party: true,
       admin: true,
     },
+  },
+  auth: {
+    user: null,
+    initialized: false,
   },
 }

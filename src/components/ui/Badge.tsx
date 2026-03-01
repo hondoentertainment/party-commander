@@ -9,11 +9,11 @@ export function Badge({ className, tone = 'muted', ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'rounded-full px-3 py-1 text-xs font-semibold',
-        tone === 'accent' && 'bg-emerald-500/20 text-emerald-200',
-        tone === 'success' && 'bg-emerald-500/20 text-emerald-200',
-        tone === 'muted' && 'bg-white/10 text-slate-300',
-        tone === 'danger' && 'bg-rose-500/20 text-rose-200',
+        'inline-flex items-center rounded-lg border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300',
+        tone === 'accent' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
+        tone === 'success' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
+        tone === 'muted' && 'border-white/5 bg-white/5 text-slate-400',
+        tone === 'danger' && 'border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]',
         className,
       )}
       {...props}

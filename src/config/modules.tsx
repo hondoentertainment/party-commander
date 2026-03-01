@@ -9,6 +9,7 @@ import {
   Music2,
   Settings,
   Sparkles,
+  User,
   UtensilsCrossed,
   Users,
   Wand2,
@@ -17,6 +18,7 @@ import type { LucideIcon } from 'lucide-react'
 
 export type ModuleId =
   | 'home'
+  | 'profile'
   | 'budget'
   | 'invites'
   | 'events'
@@ -45,6 +47,7 @@ export interface ModuleConfig {
 
 export const MODULES: ModuleConfig[] = [
   { id: 'home', to: '/', label: 'Home', icon: Home, canDisable: false },
+  { id: 'profile', to: '/profile', label: 'Profile', icon: User, canDisable: false },
   { id: 'budget', to: '/budget', label: 'Budget', icon: DollarSign, canDisable: true },
   { id: 'invites', to: '/invites', label: 'Invites', icon: Users, canDisable: true },
   { id: 'events', to: '/events', label: 'Events', icon: CalendarClock, canDisable: true },
@@ -60,7 +63,7 @@ export const MODULES: ModuleConfig[] = [
   { id: 'entry', to: '/entry', label: 'Entry', icon: DoorOpen, canDisable: true },
   { id: 'live', to: '/live', label: 'Live', icon: Sparkles, canDisable: true },
   { id: 'photo_video', to: '/photo-video', label: 'Photo/Video', icon: Camera, canDisable: true },
-  { id: 'post_party', to: '/post-party', label: 'Wrap', icon: ClipboardList, canDisable: true },
+  { id: 'post_party', to: '/post-party', label: 'Post-Party', icon: ClipboardList, canDisable: true },
   { id: 'admin', to: '/admin', label: 'Admin', icon: Settings, canDisable: false },
 ]
 

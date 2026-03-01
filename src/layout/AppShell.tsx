@@ -1,9 +1,13 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, Link } from 'react-router-dom'
 import { Navigation } from './Navigation'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { useParty } from '../state/PartyContext'
+import { User } from 'lucide-react'
 
 export function AppShell() {
   const online = useOnlineStatus()
+  const { state } = useParty()
+  const user = state.auth.user as { user_metadata?: { avatar_url?: string; full_name?: string } } | null
 
   return (
     <div className="min-h-screen bg-[#0b0f14] text-slate-100">
@@ -33,7 +37,7 @@ export function AppShell() {
         <header className="relative overflow-hidden border-b border-white/10 bg-black/30 px-6 py-6 backdrop-blur-xl">
           <div className="glow-orb" />
           <div className="glow-sweep" />
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/70">
                 Party Command Center
@@ -41,9 +45,22 @@ export function AppShell() {
               <h2 className="mt-2 text-3xl font-semibold text-white">Plan, run, and wrap.</h2>
               <p className="text-sm text-slate-300">Data saved locally in your browser.</p>
             </div>
-            <div className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-200">
-              Live Preview
-            </div>
+            <Link
+              to="/profile"
+              className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white"
+              aria-label="Open profile"
+            >
+              <div className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-white/10">
+                {user?.user_metadata?.avatar_url ? (
+                  <img src={user.user_metadata.avatar_url} alt="" className="size-full object-cover" />
+                ) : (
+                  <User className="size-5 text-slate-400" />
+                )}
+              </div>
+              <span className="hidden text-sm font-medium md:inline">
+                {user?.user_metadata?.full_name ?? 'Profile'}
+              </span>
+            </Link>
           </div>
         </header>
         <main id="main-content" className="px-6 py-8" role="main">

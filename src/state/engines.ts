@@ -85,6 +85,22 @@ export function buildDrinkSuggestions(theme: Theme): DrinkSuggestion[] {
   return [...picks, na]
 }
 
+/** Merges theme suggestions with user overrides and custom drinks. */
+export function getDrinkSuggestions(state: PartyState): DrinkSuggestion[] {
+  const theme = state.core.theme
+  const base = buildDrinkSuggestions(theme)
+  const overrides = state.drinks.drinkOverrides ?? {}
+  const custom = state.drinks.customDrinks ?? []
+
+  const merged = base.map((drink) => {
+    const override = overrides[drink.id]
+    if (!override) return drink
+    return { ...drink, ...override }
+  })
+
+  return [...merged, ...custom]
+}
+
 export function buildTimelineTasks(): TimelineTask[] {
   return [
     { id: 't-48', title: 'Confirm venue + propane check', offsetHours: -48, status: 'not_started' },
@@ -129,12 +145,11 @@ export function buildShoppingList(state: PartyState): string[] {
 }
 
 export function applyEngines(state: PartyState): PartyState {
-  const theme = state.core.theme
   return {
     ...state,
     drinks: {
       ...state.drinks,
-      suggestions: buildDrinkSuggestions(theme),
+      suggestions: getDrinkSuggestions(state),
       shoppingList: buildShoppingList(state),
     },
     timeline: {

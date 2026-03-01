@@ -7,15 +7,19 @@ import {
   parseISO,
 } from 'date-fns'
 import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin } from 'lucide-react'
 import { SectionHeader } from '../components/SectionHeader'
-import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Card, CardDescription, CardHeader, CardTitle } from '../components/ui/Card'
+import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { useParty } from '../state/PartyContext'
+import { cn } from '../components/ui/utils'
 import type { Theme } from '../state/types'
+import { SwarmConsole } from '../components/SwarmConsole'
+import { OnboardingWizard } from '../components/OnboardingWizard'
+import { supabase } from '../services/auth'
+import { ShieldCheck } from 'lucide-react'
 
 const themes: Theme[] = [
   'Classic',
@@ -32,36 +36,42 @@ export function Dashboard() {
   const { state, dispatch } = useParty()
 
   const partyDate = state.core.date ? parseISO(state.core.date) : null
-  const countdown = partyDate
+  const isValidDate = partyDate && !isNaN(partyDate.getTime())
+
+  const countdown = isValidDate
     ? {
-        days: differenceInDays(partyDate, new Date()),
-        hours: differenceInHours(partyDate, new Date()) % 24,
-        minutes: differenceInMinutes(partyDate, new Date()) % 60,
-      }
+      days: differenceInDays(partyDate, new Date()),
+      hours: differenceInHours(partyDate, new Date()) % 24,
+      minutes: differenceInMinutes(partyDate, new Date()) % 60,
+    }
     : null
 
   const readiness = [
     {
-      label: 'Venue Reserved',
+      label: 'Venue',
       ready: state.venue.amenities.some((amenity) => amenity.status === 'reserved'),
+      icon: <MapPin className="size-4" />,
     },
     {
-      label: 'Propane Ready',
+      label: 'Grill',
       ready:
         state.venue.propane.noGrillFallback ||
         ['full', 'three_quarter', 'half'].includes(state.venue.propane.level),
+      icon: <Sparkles className="size-4" />,
     },
-    { label: 'Menu Ready', ready: state.menu.items.length > 0 },
-    { label: 'Drinks Ready', ready: state.drinks.suggestions.length > 0 },
+    { label: 'Menu', ready: state.menu.items.length > 0, icon: <Utensils className="size-4" /> },
+    { label: 'Drinks', ready: state.drinks.suggestions.length > 0, icon: <GlassWater className="size-4" /> },
     {
-      label: 'Supplies Ready',
+      label: 'Supplies',
       ready: state.cleaning.bathroomSupplies.every((item) => item.status === 'done'),
+      icon: <CheckCircle2 className="size-4" />,
     },
-    { label: 'Music Ready', ready: Boolean(state.music.mainLink) },
-    { label: 'Games Ready', ready: state.games.games.length > 0 },
+    { label: 'Music', ready: Boolean(state.music.mainLink), icon: <Music className="size-4" /> },
+    { label: 'Games', ready: state.games.games.length > 0, icon: <LayoutDashboard className="size-4" /> },
     {
-      label: 'Buzz-In Ready',
+      label: 'Access',
       ready: Boolean(state.entry.instructions || state.entry.butterflyLink),
+      icon: <AlertCircle className="size-4" />,
     },
   ]
 
@@ -71,264 +81,271 @@ export function Dashboard() {
 
   const readyCount = readiness.filter((item) => item.ready).length
   const liveAlerts = Object.values(state.live.restockAlerts).filter(Boolean).length
-  const liveLabel = liveAlerts === 0 ? 'Smooth sailing' : 'Restock needed'
+  const liveLabel = liveAlerts === 0 ? 'Optimal Flow' : 'Action Required'
   const readinessPercent = Math.round((readyCount / readiness.length) * 100)
   const now = new Date()
   const upcomingEvents = state.events.items
     .filter((event) => event.date)
     .map((event) => ({ ...event, parsed: parseISO(event.date) }))
-    .filter((event) => isAfter(event.parsed, now))
+    .filter((event) => !isNaN(event.parsed.getTime()) && isAfter(event.parsed, now))
     .sort((a, b) => compareAsc(a.parsed, b.parsed))
   const nextEvent = upcomingEvents[0]
-  const archivedEvents = state.events.items.filter((event) => event.date).length - upcomingEvents.length
+  const archivedEvents =
+    state.events.items.filter((event) => {
+      if (!event.date) return false
+      const d = parseISO(event.date)
+      return !isNaN(d.getTime()) && !isAfter(d, now)
+    }).length
 
   return (
-    <div className="space-y-6 pb-20 md:pb-0">
-      <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Card className="relative overflow-hidden p-6">
-          <div className="glow-orb" />
-          <CardHeader className="relative">
-            <p className="text-xs uppercase tracking-[0.4em] text-emerald-300/70">
-              Now Hosting
-            </p>
-            <CardTitle className="mt-3 text-3xl">
-              {state.core.name || 'Party Command Center'}
-            </CardTitle>
-            <CardDescription className="mt-2">
-              {state.core.location || 'Set your location and theme to unlock suggestions.'}
-            </CardDescription>
-          </CardHeader>
-          <div className="relative mt-6 grid gap-4 md:grid-cols-3">
-            <div
-              className={[
-                'rounded-2xl border p-4 transition',
-                countdown
-                  ? 'border-white/10 bg-black/30'
-                  : 'border-amber-500/20 bg-amber-500/5 opacity-90',
-              ].join(' ')}
-            >
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Countdown</p>
-              <p
-                className={[
-                  'mt-2 text-2xl font-semibold',
-                  countdown ? 'text-white' : 'text-amber-200/90',
-                ].join(' ')}
-              >
-                {countdown
-                  ? `${countdown.days}d ${countdown.hours}h ${countdown.minutes}m`
-                  : 'Add party date'}
-              </p>
-              {!countdown ? (
-                <p className="mt-1 text-xs text-amber-300/70">
-                  Set date below to see countdown
-                </p>
-              ) : null}
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Theme</p>
-              <p className="mt-2 text-2xl font-semibold text-white">
-                {state.core.theme === 'Custom'
-                  ? state.core.customTheme || 'Custom'
-                  : state.core.theme}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">
-                Guest Count
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-white">{state.invites.guestCount}</p>
-            </div>
-          </div>
-        </Card>
+    <div className="space-y-8 pb-32">
+      <OnboardingWizard />
+      {/* Hero Section */}
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-slate-950/50 p-8 md:p-12">
+        <div className="glow-orb" />
+        <div className="glow-sweep" />
 
-        <Card className="flex flex-col gap-5">
-          <CardHeader>
-            <CardTitle>Now Playing</CardTitle>
-            <CardDescription>Music link + live status.</CardDescription>
-          </CardHeader>
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Playlist</p>
-            <p className="mt-2 text-sm text-white">
-              {state.music.mainLink || 'Add your main playlist link.'}
-            </p>
-            {state.music.mainLink ? (
-              <Button
-                className="mt-3 w-full"
-                onClick={() => window.open(state.music.mainLink, '_blank')}
-              >
-                Open playlist
+        <div className="relative z-10 grid gap-12 lg:grid-cols-[2fr_1.2fr]">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+              <ShieldCheck className="size-3" />
+              Intelligence Mode Active
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-6xl">
+                {state.core.name || 'Party Command'}
+              </h1>
+              <p className="text-lg font-medium text-slate-400">
+                {state.core.location || 'Your next world-class event starts here.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <Button size="lg" className="rounded-2xl px-8 shadow-lg shadow-emerald-500/20">
+                Quick Action
               </Button>
-            ) : null}
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Live status</p>
-            <p className="mt-2 text-lg font-semibold text-white">{liveLabel}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Badge tone="success">{readyCount} / {readiness.length} ready</Badge>
-              <Badge tone={liveAlerts === 0 ? 'success' : 'danger'}>
-                {liveAlerts} alerts
-              </Badge>
+              <Button variant="outline" size="lg" className="rounded-2xl px-8">
+                View Timeline
+              </Button>
             </div>
           </div>
-        </Card>
-      </section>
 
-      <SectionHeader
-        title="Party Snapshot"
-        subtitle="Countdown, readiness, and next steps."
-      />
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardTitle>Next Event</CardTitle>
-          {nextEvent ? (
-            <div className="mt-4 space-y-2 text-sm text-slate-300">
-              <p className="text-lg font-semibold text-white">{nextEvent.name}</p>
-              <p>{nextEvent.date}</p>
-              <p>{nextEvent.location}</p>
-              {nextEvent.link ? (
-                <Button
-                  className="mt-2"
-                  onClick={() => window.open(nextEvent.link, '_blank')}
-                >
-                  Open event link
-                </Button>
-              ) : null}
+          <div className="space-y-4">
+            <div className="rounded-[2rem] border border-white/5 bg-black/40 p-6 backdrop-blur-xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Readiness</span>
+                <span className="text-lg font-bold text-emerald-400">{readinessPercent}%</span>
+              </div>
+              <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000"
+                  style={{ width: `${readinessPercent}%` }}
+                />
+              </div>
+              <p className="mt-3 text-xs font-medium text-slate-400">
+                {readyCount} of {readiness.length} key milestones completed
+              </p>
             </div>
-          ) : (
-            <p className="mt-4 text-sm text-slate-400">No upcoming events yet.</p>
-          )}
-          <p className="mt-4 text-xs text-slate-500">Archived events: {Math.max(0, archivedEvents)}</p>
-        </Card>
 
-        <Card>
-          <CardTitle>Readiness Badges</CardTitle>
-          <div className="mt-4 rounded-full bg-white/5 p-2">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>Overall readiness</span>
-              <span>{readinessPercent}%</span>
-            </div>
-            <div className="mt-2 h-2 w-full rounded-full bg-black/40">
-              <div
-                className="h-2 rounded-full bg-emerald-500/70"
-                style={{ width: `${readinessPercent}%` }}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-3xl border border-white/5 bg-black/40 p-5 backdrop-blur-xl">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Impact</span>
+                <p className="mt-2 text-2xl font-bold text-white">{state.invites.guestCount}</p>
+                <div className="flex items-center justify-between text-[10px] text-slate-500">
+                  <span>Guests Confirmed</span>
+                  {countdown && (
+                    <span className="text-emerald-500 font-bold">
+                      T-{countdown.days}d {countdown.hours}h
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-3xl border border-white/5 bg-black/40 p-5 backdrop-blur-xl">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</span>
+                <p className="mt-2 text-xl font-bold text-emerald-400">{liveLabel}</p>
+                <p className="text-[10px] text-slate-500">
+                  {liveAlerts} active alerts · {archivedEvents} archived
+                </p>
+              </div>
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {readiness.map((item) => (
-              <Badge key={item.label} tone={item.ready ? 'success' : 'muted'}>
-                {item.label}
-              </Badge>
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <CardTitle>Next 3 Actions</CardTitle>
-            <Link
-              to="/timeline"
-              className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-            >
-              View all
-            </Link>
-          </div>
-          <ul className="mt-4 space-y-2 text-sm text-slate-300">
-            {nextActions.length === 0 ? (
-              <li>
-                <Link
-                  to="/timeline"
-                  className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-slate-400 transition hover:bg-white/10 hover:text-slate-300"
-                >
-                  Generate timeline tasks.
-                  <ChevronRight size={16} className="shrink-0" />
-                </Link>
-              </li>
-            ) : (
-              nextActions.map((task) => (
-                <li key={task.id}>
-                  <Link
-                    to="/timeline"
-                    className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <span>{task.title}</span>
-                    <ChevronRight size={16} className="shrink-0 text-slate-500" />
-                  </Link>
-                </li>
-              ))
-            )}
-          </ul>
-        </Card>
-      </section>
-
-      <Card>
-        <CardTitle>Party Details</CardTitle>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-300">
-            Party name
-            <Input
-              value={state.core.name}
-              onChange={(event) =>
-                dispatch({ type: 'update_core', payload: { name: event.target.value } })
-              }
-              className="mt-2"
-              placeholder="Rooftop Night"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Party date/time
-            <Input
-              type="datetime-local"
-              value={state.core.date}
-              onChange={(event) =>
-                dispatch({ type: 'update_core', payload: { date: event.target.value } })
-              }
-              className="mt-2"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Location
-            <Input
-              value={state.core.location}
-              onChange={(event) =>
-                dispatch({ type: 'update_core', payload: { location: event.target.value } })
-              }
-              className="mt-2"
-              placeholder="123 Main St, Rooftop"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Theme
-            <Select
-              value={state.core.theme}
-              onChange={(event) =>
-                dispatch({ type: 'update_core', payload: { theme: event.target.value as Theme } })
-              }
-              className="mt-2"
-            >
-              {themes.map((theme) => (
-                <option key={theme} value={theme}>
-                  {theme}
-                </option>
-              ))}
-            </Select>
-          </label>
-          {state.core.theme === 'Custom' ? (
-            <label className="text-sm text-slate-300 md:col-span-2">
-              Custom theme description
-              <Input
-                value={state.core.customTheme}
-                onChange={(event) =>
-                  dispatch({ type: 'update_core', payload: { customTheme: event.target.value } })
-                }
-                className="mt-2"
-                placeholder="Warm neutrals + candlelight"
-              />
-            </label>
-          ) : null}
         </div>
-      </Card>
+      </section>
+
+      {/* Intelligence War Room */}
+      <section className="space-y-6">
+        <SectionHeader
+          title="Swarm Intelligence"
+          subtitle="Autonomous agents collaborating on zero-friction event logic."
+        />
+        <SwarmConsole />
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Middle Column: Status Ticker & Upcoming */}
+        <div className="lg:col-span-2 space-y-6">
+          <SectionHeader
+            title="Operational Snapshot"
+            subtitle="Real-time preparation metrics and upcoming milestones."
+          />
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="flex flex-col justify-between">
+              <div>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="size-5 text-emerald-400" />
+                    Next Event
+                  </CardTitle>
+                </CardHeader>
+                {nextEvent ? (
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-xl font-bold text-white">{nextEvent.name}</p>
+                      <p className="text-sm font-medium text-slate-400">{nextEvent.date}</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                      <MapPin className="size-4 text-slate-500" />
+                      {nextEvent.location}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">Initialize your next event to track progress.</p>
+                )}
+              </div>
+              {nextEvent?.link && (
+                <Button variant="outline" className="mt-6 w-full rounded-xl" onClick={() => window.open(nextEvent.link, '_blank')}>
+                  Open Event Protocol
+                </Button>
+              )}
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="size-5 text-emerald-400" />
+                  Readiness Matrix
+                </CardTitle>
+              </CardHeader>
+              <div className="grid grid-cols-2 gap-3">
+                {readiness.map((item) => (
+                  <div key={item.label} className={cn(
+                    "flex items-center gap-2 rounded-xl border p-2.5 transition-colors",
+                    item.ready ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300" : "border-white/5 bg-white/5 text-slate-500"
+                  )}>
+                    {item.ready ? <CheckCircle2 className="size-3" /> : item.icon}
+                    <span className="text-[11px] font-bold uppercase tracking-tight">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="border-rose-500/10 bg-rose-500/5 mt-8">
+              <div className="p-6 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-rose-400">Security Terminal</h4>
+                  <p className="text-[10px] text-slate-500">Operator Identity: {state.auth.user?.email}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => supabase.auth.signOut()}
+                  className="text-rose-400 hover:bg-rose-500/10"
+                >
+                  Logout
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          <Card>
+            <div className="flex items-center justify-between mb-6">
+              <CardTitle className="flex items-center gap-2">
+                <LayoutDashboard className="size-5 text-emerald-400" />
+                Critical Path
+              </CardTitle>
+              <Link to="/timeline" className="text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors">
+                Override View
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {nextActions.length === 0 ? (
+                <Link to="/timeline" className="flex items-center justify-center rounded-2xl border-2 border-dashed border-white/5 py-12 text-sm font-medium text-slate-500 hover:border-emerald-500/20 hover:text-slate-400 transition-all">
+                  Initialize Timeline Protocol
+                </Link>
+              ) : (
+                nextActions.map((task) => (
+                  <Link key={task.id} to="/timeline" className="group flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="flex size-10 items-center justify-center rounded-full bg-slate-900 group-hover:bg-emerald-500/20 transition-colors">
+                        <Sparkles className="size-4 text-emerald-500" />
+                      </div>
+                      <span className="font-semibold text-white">{task.title}</span>
+                    </div>
+                    <ChevronRight size={18} className="text-slate-600 group-hover:text-emerald-400 transition-colors" />
+                  </Link>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Column: Settings & Quick Config */}
+        <div className="space-y-6">
+          <SectionHeader
+            title="Registry"
+            subtitle="Core event parameters."
+          />
+
+          <Card>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Event Name</label>
+                <Input
+                  value={state.core.name}
+                  onChange={(event) => dispatch({ type: 'update_core', payload: { name: event.target.value } })}
+                  className="rounded-xl border-white/5 bg-black/20 focus:bg-black/40"
+                  placeholder="e.g. My Awesome Party"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Date & Time</label>
+                <Input
+                  type="datetime-local"
+                  value={state.core.date}
+                  onChange={(event) => dispatch({ type: 'update_core', payload: { date: event.target.value } })}
+                  className="rounded-xl border-white/5 bg-black/20 focus:bg-black/40"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Party Theme</label>
+                <Select
+                  value={state.core.theme}
+                  onChange={(event) => dispatch({ type: 'update_core', payload: { theme: event.target.value as Theme } })}
+                  className="rounded-xl border-white/5 bg-black/20"
+                >
+                  {themes.map((theme) => (
+                    <option key={theme} value={theme}>{theme}</option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Location</label>
+                <Input
+                  value={state.core.location}
+                  onChange={(event) => dispatch({ type: 'update_core', payload: { location: event.target.value } })}
+                  className="rounded-xl border-white/5 bg-black/20 focus:bg-black/40"
+                  placeholder="e.g. My Place"
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

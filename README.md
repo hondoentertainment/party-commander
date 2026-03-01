@@ -2,6 +2,18 @@
 
 ## Setup
 
+### Supabase Auth (Google & Magic Link)
+
+1. Create a [Supabase](https://supabase.com) project and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to `.env`.
+
+2. **Redirect URLs**: In Supabase Dashboard → Auth → URL Configuration, add:
+   - `http://localhost:5173/auth/callback` (dev)
+   - Your production URL + `/auth/callback`
+
+3. **Google OAuth**: Enable in Auth → Providers → Google. Add your Google OAuth Client ID and Secret from [Google Cloud Console](https://console.cloud.google.com/auth).
+
+4. **Profiles table**: Run the migration in `supabase/migrations/001_profiles.sql` via Supabase SQL Editor or CLI.
+
 ### Windows PowerShell
 
 PowerShell 5.1 does not support `&&`. Use the setup script or run commands separately.
