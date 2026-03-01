@@ -156,7 +156,6 @@ export const defaultPartyState: PartyState = {
   admin: {
     modules: {
       home: true,
-      profile: true,
       budget: true,
       invites: true,
       events: true,

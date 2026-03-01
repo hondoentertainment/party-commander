@@ -278,4 +278,6 @@ export interface PartyEvent {
   location: string
   link: string
   notes: string
+  /** Person responsible for this event */
+  leadName?: string
 }

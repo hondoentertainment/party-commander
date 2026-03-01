@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { supabase, AuthService } from '../services/auth'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
@@ -31,7 +31,7 @@ function AccessDenied({ email }: { email: string }) {
     const handleSignOut = () => supabase.auth.signOut()
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#020617] px-6 py-12">
+        <div className="flex min-h-screen items-center justify-center overflow-y-auto bg-[#020617] px-6 py-12">
             <div className="glow-orb" />
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -78,6 +78,16 @@ function AccessDenied({ email }: { email: string }) {
 
 export function AuthGate() {
     const { state } = useParty()
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        if (!state.auth.user) return
+        const returnTo = sessionStorage.getItem('inviteReturnTo')
+        if (returnTo) {
+            sessionStorage.removeItem('inviteReturnTo')
+            navigate(returnTo, { replace: true })
+        }
+    }, [state.auth.user, navigate])
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
@@ -89,7 +99,7 @@ export function AuthGate() {
 
     if (!state.auth.initialized) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#020617]">
+            <div className="flex min-h-screen items-center justify-center overflow-y-auto bg-[#020617]">
                 <Loader2 className="size-8 animate-spin text-emerald-500" />
             </div>
         )
@@ -153,7 +163,7 @@ export function AuthGate() {
     const showEmailConfirmSuccess = emailConfirmationSent
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#020617] px-6 py-12">
+        <div className="flex min-h-screen items-center justify-center overflow-y-auto bg-[#020617] px-6 py-12">
             <div className="glow-orb" />
             <div className="glow-sweep" />
 

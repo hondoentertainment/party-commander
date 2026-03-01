@@ -141,9 +141,10 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
 
   const refreshParties = useCallback(async () => {
     if (!partyProfile) return
-    const list = await PartyService.list(partyProfile.id)
+    const user = state.auth.user as { id: string } | null
+    const list = await PartyService.list(partyProfile.id, user?.id)
     setParties(list)
-  }, [partyProfile])
+  }, [partyProfile, state.auth.user])
 
   const switchParty = useCallback(
     async (id: string) => {
@@ -208,7 +209,7 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return
         setPartyProfile(profile)
 
-        const list = await PartyService.list(profile.id)
+        const list = await PartyService.list(profile.id, user.id)
         if (cancelled) return
         setParties(list)
 

@@ -17,15 +17,46 @@ function stateForStorage(state: PartyState): Omit<PartyState, 'auth'> {
 }
 
 export const PartyService = {
-  async list(partyProfileId: string): Promise<PartyRow[]> {
-    const { data, error } = await supabase
-      .from('parties')
-      .select('id, party_profile_id, name, state, created_at, updated_at')
-      .eq('party_profile_id', partyProfileId)
-      .order('updated_at', { ascending: false })
+  async list(partyProfileId: string, userId?: string): Promise<PartyRow[]> {
+    const [ownedRes, collaboratedRes] = await Promise.all([
+      supabase
+        .from('parties')
+        .select('id, party_profile_id, name, state, created_at, updated_at')
+        .eq('party_profile_id', partyProfileId)
+        .order('updated_at', { ascending: false }),
+      userId
+        ? supabase
+            .from('party_collaborators')
+            .select('party_id')
+            .eq('user_id', userId)
+            .then(async ({ data: collabIds, error: ce }) => {
+              if (ce || !collabIds?.length) return [] as PartyRow[]
+              const ids = collabIds.map((r) => r.party_id)
+              const { data, error } = await supabase
+                .from('parties')
+                .select('id, party_profile_id, name, state, created_at, updated_at')
+                .in('id', ids)
+                .order('updated_at', { ascending: false })
+              if (error) return []
+              return (data ?? []) as PartyRow[]
+            })
+        : Promise.resolve([] as PartyRow[]),
+    ])
 
-    if (error) throw error
-    return (data ?? []) as PartyRow[]
+    if (ownedRes.error) throw ownedRes.error
+    const owned = (ownedRes.data ?? []) as PartyRow[]
+    const collaborated = collaboratedRes
+
+    const seen = new Set(owned.map((p) => p.id))
+    const merged = [...owned]
+    for (const p of collaborated) {
+      if (!seen.has(p.id)) {
+        seen.add(p.id)
+        merged.push(p)
+      }
+    }
+    merged.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    return merged
   },
 
   async get(partyId: string): Promise<PartyRow | null> {

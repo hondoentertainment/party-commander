@@ -73,7 +73,7 @@ export function AuthCallback() {
 
     if (error) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center bg-[#020617] px-6">
+            <div className="flex min-h-screen flex-col items-center justify-center overflow-y-auto bg-[#020617] px-6">
                 <AlertCircle className="size-12 text-rose-400" />
                 <p className="mt-4 max-w-md text-center text-slate-300">{error}</p>
                 <button
@@ -87,7 +87,7 @@ export function AuthCallback() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#020617]">
+        <div className="flex min-h-screen items-center justify-center overflow-y-auto bg-[#020617]">
             <Loader2 className="size-10 animate-spin text-emerald-500" />
         </div>
     )

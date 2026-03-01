@@ -69,7 +69,7 @@ export function AppShell() {
             </div>
           </div>
         </header>
-        <main id="main-content" className="px-6 py-8" role="main">
+        <main id="main-content" className="px-6 pt-8 pb-20 md:pb-8" role="main">
           <Outlet />
         </main>
       </div>

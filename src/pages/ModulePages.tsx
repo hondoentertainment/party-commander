@@ -466,6 +466,7 @@ export function EventsPage() {
     location: '',
     link: '',
     notes: '',
+    leadName: '',
   })
 
   const addEvent = () => {
@@ -475,11 +476,11 @@ export function EventsPage() {
       payload: {
         items: [
           ...state.events.items,
-          { id: uuid(), ...draft, name: draft.name.trim() },
+          { id: uuid(), ...draft, name: draft.name.trim(), leadName: draft.leadName.trim() || undefined },
         ],
       },
     })
-    setDraft({ name: '', date: '', location: '', link: '', notes: '' })
+    setDraft({ name: '', date: '', location: '', link: '', notes: '', leadName: '' })
   }
 
   const updateEvent = (id: string, updates: Partial<(typeof state.events.items)[0]>) => {
@@ -542,6 +543,15 @@ export function EventsPage() {
               placeholder="https://partiful.com/..."
             />
           </label>
+          <label className="text-sm text-slate-300">
+            Lead
+            <Input
+              value={draft.leadName}
+              onChange={(event) => setDraft({ ...draft, leadName: event.target.value })}
+              className="mt-2"
+              placeholder="Person responsible"
+            />
+          </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Notes
             <Textarea
@@ -584,6 +594,11 @@ export function EventsPage() {
                     value={event.link}
                     onChange={(e) => updateEvent(event.id, { link: e.target.value })}
                     placeholder="Link"
+                  />
+                  <Input
+                    value={event.leadName ?? ''}
+                    onChange={(e) => updateEvent(event.id, { leadName: e.target.value || undefined })}
+                    placeholder="Lead"
                   />
                   <Textarea
                     value={event.notes}

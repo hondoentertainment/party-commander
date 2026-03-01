@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   compareAsc,
   differenceInHours,
@@ -6,8 +7,8 @@ import {
   isAfter,
   parseISO,
 } from 'date-fns'
-import { Link } from 'react-router-dom'
-import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin, User } from 'lucide-react'
 import { SectionHeader } from '../components/SectionHeader'
 import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
@@ -33,7 +34,18 @@ const themes: Theme[] = [
 ]
 
 export function Dashboard() {
-  const { state, dispatch } = useParty()
+  const { state, dispatch, switchParty } = useParty()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const partyIdFromUrl = searchParams.get('party')
+
+  useEffect(() => {
+    if (!partyIdFromUrl || !switchParty) return
+    switchParty(partyIdFromUrl).then(() => {
+      const next = new URLSearchParams(searchParams)
+      next.delete('party')
+      setSearchParams(next, { replace: true })
+    }).catch(() => {})
+  }, [partyIdFromUrl, switchParty])
 
   const partyDate = state.core.date ? parseISO(state.core.date) : null
   const isValidDate = partyDate && !isNaN(partyDate.getTime())
@@ -125,9 +137,11 @@ export function Dashboard() {
               <Button size="lg" className="rounded-2xl px-8 shadow-lg shadow-emerald-500/20">
                 Quick Action
               </Button>
-              <Button variant="outline" size="lg" className="rounded-2xl px-8">
-                View Timeline
-              </Button>
+              <Link to="/timeline">
+                <Button variant="outline" size="lg" className="rounded-2xl px-8">
+                  View Timeline
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -209,6 +223,12 @@ export function Dashboard() {
                       <MapPin className="size-4 text-slate-500" />
                       {nextEvent.location}
                     </div>
+                    {nextEvent.leadName && (
+                      <div className="flex items-center gap-2 text-sm text-slate-400">
+                        <User className="size-4 text-slate-500" />
+                        Lead: {nextEvent.leadName}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500">Initialize your next event to track progress.</p>

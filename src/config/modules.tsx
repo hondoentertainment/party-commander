@@ -9,7 +9,6 @@ import {
   Music2,
   Settings,
   Sparkles,
-  User,
   UtensilsCrossed,
   Users,
   Wand2,
@@ -18,7 +17,6 @@ import type { LucideIcon } from 'lucide-react'
 
 export type ModuleId =
   | 'home'
-  | 'profile'
   | 'budget'
   | 'invites'
   | 'events'
@@ -47,7 +45,7 @@ export interface ModuleConfig {
 
 export const MODULES: ModuleConfig[] = [
   { id: 'home', to: '/', label: 'Home', icon: Home, canDisable: false },
-  { id: 'profile', to: '/profile', label: 'Profile', icon: User, canDisable: false },
+  { id: 'timeline', to: '/timeline', label: 'Timeline', icon: CalendarClock, canDisable: true },
   { id: 'budget', to: '/budget', label: 'Budget', icon: DollarSign, canDisable: true },
   { id: 'invites', to: '/invites', label: 'Invites', icon: Users, canDisable: true },
   { id: 'events', to: '/events', label: 'Events', icon: CalendarClock, canDisable: true },
@@ -56,7 +54,6 @@ export const MODULES: ModuleConfig[] = [
   { id: 'drinks', to: '/drinks', label: 'Drinks', icon: Sparkles, canDisable: true },
   { id: 'decor', to: '/decor', label: 'Decor', icon: Wand2, canDisable: true },
   { id: 'cleaning', to: '/cleaning', label: 'Cleaning', icon: ClipboardList, canDisable: true },
-  { id: 'timeline', to: '/timeline', label: 'Timeline', icon: CalendarClock, canDisable: true },
   { id: 'music', to: '/music', label: 'Music', icon: Music2, canDisable: true },
   { id: 'games', to: '/games', label: 'Games', icon: Sparkles, canDisable: true },
   { id: 'venue', to: '/venue', label: 'Venue', icon: MapPin, canDisable: true },

@@ -39,6 +39,7 @@
     "jsdom": "^28.1.0",
     "lucide-react": "^0.563.0",
     "react-router-dom": "^7.13.0",
+    "supabase": "^2.76.15",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
