@@ -15,10 +15,11 @@ const steps = [
 ]
 
 export function OnboardingWizard() {
-    const { state, dispatch } = useParty()
+    const { state, dispatch, createParty, partyProfile, parties } = useParty()
     const [currentStep, setCurrentStep] = useState(0)
+    const [creating, setCreating] = useState(false)
 
-    if (state.core.name) return null
+    if (state.core.name && (!partyProfile || parties?.length > 0)) return null
 
     const next = () => {
         if (currentStep < steps.length - 1) {
@@ -26,10 +27,17 @@ export function OnboardingWizard() {
         }
     }
 
-    const handleFinish = () => {
-        // If name is still empty, it won't close, so we ensure something is there
+    const handleFinish = async () => {
         if (!state.core.name) {
             dispatch({ type: 'update_core', payload: { name: 'Untethered Soirée' } })
+        }
+        if (partyProfile) {
+            setCreating(true)
+            try {
+                await createParty()
+            } finally {
+                setCreating(false)
+            }
         }
     }
 
@@ -128,8 +136,8 @@ export function OnboardingWizard() {
                                         <ArrowRight className="size-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                     </Button>
                                 ) : (
-                                    <Button size="lg" onClick={handleFinish} className="rounded-2xl px-12 bg-emerald-500 text-black hover:bg-emerald-400 shadow-xl shadow-emerald-500/20">
-                                        Deploy intelligence
+                                    <Button size="lg" onClick={handleFinish} disabled={creating} className="rounded-2xl px-12 bg-emerald-500 text-black hover:bg-emerald-400 shadow-xl shadow-emerald-500/20">
+                                        {creating ? 'Creating party…' : 'Deploy intelligence'}
                                         <Check className="size-4 ml-2" />
                                     </Button>
                                 )}

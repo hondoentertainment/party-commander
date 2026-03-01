@@ -1,12 +1,13 @@
 import { Outlet, Link } from 'react-router-dom'
 import { Navigation } from './Navigation'
+import { PartySwitcher } from '../components/PartySwitcher'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useParty } from '../state/PartyContext'
 import { User } from 'lucide-react'
 
 export function AppShell() {
   const online = useOnlineStatus()
-  const { state } = useParty()
+  const { state, partyProfile } = useParty()
   const user = state.auth.user as { user_metadata?: { avatar_url?: string; full_name?: string } } | null
 
   return (
@@ -38,14 +39,18 @@ export function AppShell() {
           <div className="glow-orb" />
           <div className="glow-sweep" />
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/70">
                 Party Command Center
               </p>
               <h2 className="mt-2 text-3xl font-semibold text-white">Plan, run, and wrap.</h2>
-              <p className="text-sm text-slate-300">Data saved locally in your browser.</p>
+              <p className="text-sm text-slate-300">
+                {partyProfile ? `${partyProfile.name} — synced` : 'Data saved locally in your browser.'}
+              </p>
             </div>
-            <Link
+            <div className="flex shrink-0 items-center gap-3">
+              <PartySwitcher />
+              <Link
               to="/profile"
               className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white"
               aria-label="Open profile"
@@ -61,6 +66,7 @@ export function AppShell() {
                 {user?.user_metadata?.full_name ?? 'Profile'}
               </span>
             </Link>
+            </div>
           </div>
         </header>
         <main id="main-content" className="px-6 py-8" role="main">

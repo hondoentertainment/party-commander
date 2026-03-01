@@ -223,6 +223,19 @@ export interface BudgetState {
   limit?: number
 }
 
+export interface PartyProfileInfo {
+  id: string
+  name: string
+  owner_id: string
+}
+
+export interface PartySummary {
+  id: string
+  name: string
+  updated_at: string
+  party_profile_id: string
+}
+
 export interface PartyState {
   core: PartyCore
   invites: Invites

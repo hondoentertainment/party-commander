@@ -1,6 +1,7 @@
 import type { PartyState } from './types'
 
 const STORAGE_KEY = 'party-command-center'
+const LAST_PARTY_KEY = 'party-command-center-last-party'
 const STORAGE_VERSION = 1
 
 interface StoredState {
@@ -26,4 +27,13 @@ export function saveState(state: PartyState) {
     data: state,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+}
+
+export function getLastPartyId(): string | null {
+  return localStorage.getItem(LAST_PARTY_KEY)
+}
+
+export function setLastPartyId(partyId: string | null) {
+  if (partyId) localStorage.setItem(LAST_PARTY_KEY, partyId)
+  else localStorage.removeItem(LAST_PARTY_KEY)
 }

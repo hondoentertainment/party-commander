@@ -1,8 +1,19 @@
-import { createContext, useContext, useEffect, useMemo, useReducer } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react'
 import { supabase } from '../services/auth'
+import { PartyProfileService, type PartyProfile } from '../services/partyProfile'
+import { PartyService, type PartyRow } from '../services/parties'
 import { applyEngines } from './engines'
 import { defaultPartyState } from './defaults'
-import { loadState, saveState } from './storage'
+import { getLastPartyId, loadState, saveState, setLastPartyId } from './storage'
 import type { PartyState } from './types'
 
 type PartyAction =
@@ -26,6 +37,34 @@ type PartyAction =
   | { type: 'update_photo_video'; payload: Partial<PartyState['photoVideo']> }
   | { type: 'update_admin'; payload: Partial<PartyState['admin']> }
   | { type: 'update_auth'; payload: Partial<PartyState['auth']> }
+
+function mergeStoredWithDefaults(stored: Partial<PartyState> | null): PartyState {
+  const base = stored
+    ? {
+        ...defaultPartyState,
+        ...stored,
+        budget: {
+          ...defaultPartyState.budget,
+          ...(stored.budget ?? {}),
+          lineItems: stored.budget?.lineItems ?? defaultPartyState.budget.lineItems,
+        },
+        photoVideo: {
+          ...defaultPartyState.photoVideo,
+          ...stored.photoVideo,
+          photos: stored.photoVideo?.photos ?? defaultPartyState.photoVideo.photos,
+        },
+        admin: {
+          ...defaultPartyState.admin,
+          ...stored.admin,
+          modules: {
+            ...defaultPartyState.admin.modules,
+            ...(stored.admin?.modules ?? {}),
+          },
+        },
+      }
+    : defaultPartyState
+  return applyEngines(base)
+}
 
 function reducer(state: PartyState, action: PartyAction): PartyState {
   switch (action.type) {
@@ -74,54 +113,183 @@ function reducer(state: PartyState, action: PartyAction): PartyState {
   }
 }
 
-const PartyContext = createContext<{
+type PartyContextValue = {
   state: PartyState
   dispatch: React.Dispatch<PartyAction>
-} | null>(null)
+  partyProfile: PartyProfile | null
+  currentPartyId: string | null
+  parties: PartyRow[]
+  partyLoading: boolean
+  switchParty: (id: string) => Promise<void>
+  createParty: (useCurrentState?: boolean) => Promise<string>
+  refreshParties: () => Promise<void>
+}
+
+const PartyContext = createContext<PartyContextValue | null>(null)
 
 export function PartyProvider({ children }: { children: React.ReactNode }) {
+  const [partyProfile, setPartyProfile] = useState<PartyProfile | null>(null)
+  const [currentPartyId, setCurrentPartyId] = useState<string | null>(null)
+  const [parties, setParties] = useState<PartyRow[]>([])
+  const [partyLoading, setPartyLoading] = useState(false)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [state, dispatch] = useReducer(reducer, defaultPartyState, () => {
     const stored = loadState()
-    const merged = stored
-      ? {
-        ...defaultPartyState,
-        ...stored,
-        budget: {
-          ...defaultPartyState.budget,
-          ...(stored.budget ?? {}),
-          lineItems: stored.budget?.lineItems ?? defaultPartyState.budget.lineItems,
-        },
-        photoVideo: {
-          ...defaultPartyState.photoVideo,
-          ...stored.photoVideo,
-          photos: stored.photoVideo?.photos ?? defaultPartyState.photoVideo.photos,
-        },
-        admin: {
-          ...defaultPartyState.admin,
-          ...stored.admin,
-          modules: {
-            ...defaultPartyState.admin.modules,
-            ...(stored.admin?.modules ?? {}),
-          },
-        },
-      }
-      : defaultPartyState
-    return applyEngines(merged)
+    return mergeStoredWithDefaults(stored)
   })
 
+  const refreshParties = useCallback(async () => {
+    if (!partyProfile) return
+    const list = await PartyService.list(partyProfile.id)
+    setParties(list)
+  }, [partyProfile])
+
+  const switchParty = useCallback(
+    async (id: string) => {
+      const row = await PartyService.get(id)
+      if (!row) return
+      const stored = row.state as Partial<PartyState>
+      const merged = mergeStoredWithDefaults(stored)
+      dispatch({
+        type: 'set_state',
+        payload: { ...merged, auth: state.auth },
+      })
+      setCurrentPartyId(id)
+      setLastPartyId(id)
+    },
+    [state.auth]
+  )
+
+  const createParty = useCallback(
+    async (useCurrentState = true) => {
+      if (!partyProfile) throw new Error('No party profile')
+      const initialState = useCurrentState ? state : { ...defaultPartyState, core: { ...defaultPartyState.core, name: '' }, auth: state.auth }
+      const row = await PartyService.create(partyProfile.id, initialState)
+      setCurrentPartyId(row.id)
+      setLastPartyId(row.id)
+      setParties((prev) => [row, ...prev])
+      if (!useCurrentState) {
+        dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
+      }
+      return row.id
+    },
+    [partyProfile, state]
+  )
+
+  // Auth state change
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      dispatch({ type: 'update_auth', payload: { user: session?.user ?? null, initialized: true } })
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Load party profile and parties when user logs in
+  useEffect(() => {
+    const user = state.auth.user as { id: string } | null
+    if (!user?.id || !state.auth.initialized) {
+      setPartyProfile(null)
+      setCurrentPartyId(null)
+      setParties([])
+      setPartyLoading(false)
+      return
+    }
+
+    const auth = state.auth
+    let cancelled = false
+    setPartyLoading(true)
+
+    ;(async () => {
+      try {
+        const profile = await PartyProfileService.ensureForUser(user.id)
+        if (cancelled) return
+        setPartyProfile(profile)
+
+        const list = await PartyService.list(profile.id)
+        if (cancelled) return
+        setParties(list)
+
+        const lastId = getLastPartyId()
+        const toLoad = list.find((p) => p.id === lastId) ?? list[0]
+        if (toLoad) {
+          const row = await PartyService.get(toLoad.id)
+          if (cancelled || !row) return
+          const stored = row.state as Partial<PartyState>
+          const merged = mergeStoredWithDefaults(stored)
+          dispatch({
+            type: 'set_state',
+            payload: { ...merged, auth },
+          })
+          setCurrentPartyId(row.id)
+          setLastPartyId(row.id)
+        } else {
+          dispatch({
+            type: 'set_state',
+            payload: {
+              ...defaultPartyState,
+              core: { ...defaultPartyState.core, name: '' },
+              auth,
+            },
+          })
+        }
+      } catch (err) {
+        if (!cancelled) console.error('Failed to load party profile:', err)
+      } finally {
+        if (!cancelled) setPartyLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [state.auth.user?.id, state.auth.initialized])
+
+  // Persist: localStorage (always) + Supabase (when logged in with current party)
   useEffect(() => {
     saveState(state)
   }, [state])
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      dispatch({ type: 'update_auth', payload: { user: session?.user ?? null, initialized: true } })
-    })
+    const user = state.auth.user as { id: string } | null
+    if (!user || !currentPartyId) return
 
-    return () => subscription.unsubscribe()
-  }, [])
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => {
+      PartyService.update(currentPartyId, state).catch(console.error)
+      saveTimeoutRef.current = null
+    }, 1000)
 
-  const value = useMemo(() => ({ state, dispatch }), [state])
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    }
+  }, [state, currentPartyId, state.auth.user])
+
+  const value = useMemo(
+    () => ({
+      state,
+      dispatch,
+      partyProfile,
+      currentPartyId,
+      parties,
+      partyLoading,
+      switchParty,
+      createParty,
+      refreshParties,
+    }),
+    [
+      state,
+      partyProfile,
+      currentPartyId,
+      parties,
+      partyLoading,
+      switchParty,
+      createParty,
+      refreshParties,
+    ]
+  )
 
   return <PartyContext.Provider value={value}>{children}</PartyContext.Provider>
 }

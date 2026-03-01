@@ -14,7 +14,7 @@ export function AuthGate() {
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+    const [mode, setMode] = useState<'signin' | 'signup'>('signup')
     const [authMethod, setAuthMethod] = useState<'password' | 'magic' | null>(null)
     const [magicLinkSent, setMagicLinkSent] = useState(false)
 
@@ -100,13 +100,47 @@ export function AuthGate() {
                     <div className="mx-auto flex size-16 items-center justify-center rounded-[2rem] bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
                         <Lock className="size-8 text-emerald-400" />
                     </div>
-                    <h1 className="mt-6 text-3xl font-bold tracking-tight text-white">Intelligence Hub Authentication</h1>
-                    <p className="mt-2 text-slate-400">Sign in to access the command center.</p>
+                    <h1 className="mt-6 text-3xl font-bold tracking-tight text-white">
+                        {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+                    </h1>
+                    <p className="mt-2 text-slate-400">
+                        {mode === 'signup'
+                            ? 'Sign up to create your party profile and plan events.'
+                            : 'Sign in to access your party command center.'}
+                    </p>
+                    <div className="mt-6 flex rounded-2xl border border-white/10 bg-black/20 p-1">
+                        <button
+                            type="button"
+                            onClick={() => setMode('signin')}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${mode === 'signin' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            Sign In
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMode('signup')}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${mode === 'signup' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            Sign Up
+                        </button>
+                    </div>
                 </div>
 
                 <Card className="border-white/5 bg-black/40 backdrop-blur-2xl">
                     {/* Google Sign In */}
                     <div className="space-y-4">
+                        <AnimatePresence>
+                            {error && (
+                                <motion.p
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-400"
+                                >
+                                    {error}
+                                </motion.p>
+                            )}
+                        </AnimatePresence>
                         <Button
                             type="button"
                             variant="outline"
@@ -236,19 +270,6 @@ export function AuthGate() {
                                     />
                                 </div>
 
-                                <AnimatePresence>
-                                    {error && (
-                                        <motion.p
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: 'auto' }}
-                                            exit={{ opacity: 0, height: 0 }}
-                                            className="text-xs font-medium text-rose-400"
-                                        >
-                                            {error}
-                                        </motion.p>
-                                    )}
-                                </AnimatePresence>
-
                                 <Button
                                     type="submit"
                                     size="lg"
@@ -258,21 +279,14 @@ export function AuthGate() {
                                     {loading ? <Loader2 className="size-4 animate-spin" /> : mode === 'signin' ? 'Sign In' : 'Create account'}
                                 </Button>
 
-                                <div className="flex items-center justify-between">
-                                    <button
-                                        type="button"
-                                        onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-                                        className="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-400 transition-colors"
-                                    >
-                                        {mode === 'signin' ? 'New here?' : 'Existing account?'}
-                                    </button>
+                                <div className="flex justify-end">
                                     <button
                                         type="button"
                                         onClick={() => setAuthMethod('magic')}
                                         className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-emerald-500/60 hover:text-emerald-400 transition-colors"
                                     >
                                         <Mail className="size-3" />
-                                        Magic link
+                                        Magic link instead
                                     </button>
                                 </div>
                             </form>

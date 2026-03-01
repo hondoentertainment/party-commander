@@ -5,7 +5,7 @@ import { Loader2, AlertCircle } from 'lucide-react'
 
 /**
  * Handles OAuth and magic link redirects.
- * - OAuth: Supabase puts tokens in URL hash; client auto-restores session on load.
+ * - OAuth: Supabase puts tokens in URL hash; client restores session async.
  * - Magic link: URL has token_hash&type; we call verifyOtp to establish session.
  */
 export function AuthCallback() {
@@ -17,6 +17,7 @@ export function AuthCallback() {
         const run = async () => {
             const tokenHash = searchParams.get('token_hash')
             const type = searchParams.get('type')
+            const isOAuthReturn = typeof window !== 'undefined' && window.location.hash.length > 0
 
             if (tokenHash && type) {
                 const { error } = await AuthService.verifyMagicLink(tokenHash, type)
@@ -26,15 +27,29 @@ export function AuthCallback() {
                 }
             }
 
-            // For OAuth, session is restored from hash by Supabase; for magic link, verifyOtp sets it.
+            // For OAuth, Supabase processes the hash asynchronously; poll briefly for session.
+            const maxAttempts = 10
+            const delayMs = 150
+            for (let i = 0; i < maxAttempts; i++) {
+                const { data } = await supabase.auth.getSession()
+                if (data.session) {
+                    navigate('/', { replace: true })
+                    return
+                }
+                if (!isOAuthReturn && !tokenHash) break
+                await new Promise((r) => setTimeout(r, delayMs))
+            }
+
             const { data } = await supabase.auth.getSession()
             if (data.session) {
                 navigate('/', { replace: true })
                 return
             }
 
-            if (!tokenHash && !type) {
+            if (!tokenHash && !type && !isOAuthReturn) {
                 setError('Invalid auth callback. No session or verification params.')
+            } else if (isOAuthReturn || tokenHash) {
+                setError('Sign-in could not be completed. Please try again.')
             }
         }
 

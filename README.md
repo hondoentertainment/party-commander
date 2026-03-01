@@ -2,17 +2,57 @@
 
 ## Setup
 
-### Supabase Auth (Google & Magic Link)
+### Supabase Auth (Google / Gmail & Magic Link)
 
-1. Create a [Supabase](https://supabase.com) project and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to `.env`.
+1. **Create a Supabase project** at [supabase.com](https://supabase.com) and copy the project URL and anon key from Settings → API. Add them to `.env`:
+
+   ```
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
 
 2. **Redirect URLs**: In Supabase Dashboard → Auth → URL Configuration, add:
    - `http://localhost:5173/auth/callback` (dev)
-   - Your production URL + `/auth/callback`
+   - `http://127.0.0.1:5173/auth/callback` (alternate localhost)
+   - Your production URL + `/auth/callback` (e.g. `https://mysite.com/auth/callback`)
 
-3. **Google OAuth**: Enable in Auth → Providers → Google. Add your Google OAuth Client ID and Secret from [Google Cloud Console](https://console.cloud.google.com/auth).
+3. **Enable Google / Gmail sign-in**:
+   - In Supabase: Auth → Providers → Google → Enable the provider.
+   - In [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+     - Create an OAuth 2.0 Client ID (Web application).
+     - Under **Authorized JavaScript origins**, add:
+       - `http://localhost:5173` (and `http://127.0.0.1:5173` for dev)
+       - Your production origin (e.g. `https://mysite.com`)
+     - Under **Authorized redirect URIs**, add your Supabase callback URL (shown on the Supabase Google provider page, e.g. `https://xxxxxxxx.supabase.co/auth/v1/callback`).
+   - In Google Cloud Console → APIs & Services → [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent), ensure:
+     - `../auth/userinfo.email` (default)
+     - `../auth/userinfo.profile` (default)
+     - `openid` (add manually in OAuth consent screen → Scopes)
+   - Copy Client ID and Client Secret into Supabase → Auth → Providers → Google.
 
 4. **Profiles table**: Run the migration in `supabase/migrations/001_profiles.sql` via Supabase SQL Editor or CLI.
+
+### Deployment (GitHub + Vercel)
+
+1. **Push to GitHub** (if needed):
+   ```powershell
+   git add .
+   git commit -m "Prepare for deployment"
+   git push origin main
+   ```
+
+2. **Deploy to Vercel**:
+   - Go to [vercel.com](https://vercel.com) and sign in with GitHub.
+   - Click **Add New** → **Project** and import `hondoentertainment/party-commander` (or your repo).
+   - Vercel auto-detects Vite. Root directory, build command, and output are set via `vercel.json`.
+   - Add environment variables under Project → Settings → Environment Variables:
+     - `VITE_SUPABASE_URL` (Production + Preview)
+     - `VITE_SUPABASE_ANON_KEY` (Production + Preview)
+   - Deploy. Pushes to `main` deploy to production; other branches/PRs get preview URLs.
+
+3. **Update Supabase redirect URLs**: Add your Vercel URL(s) in Supabase Auth → URL Configuration, e.g.:
+   - `https://your-app.vercel.app/auth/callback`
+   - `https://*.vercel.app/auth/callback` (for preview deployments, if your plan supports wildcards)
 
 ### Windows PowerShell
 
