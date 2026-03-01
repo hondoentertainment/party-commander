@@ -24,6 +24,12 @@
 
    **Note**: For production, configure custom SMTP (Auth → Email Templates → SMTP Settings) if you need reliable delivery and branding. Supabase’s built-in email works but has rate limits.
 
+   **Email confirmation not working?**
+   - **Redirect URL must be allowed**: Add `https://party-commander.vercel.app/auth/callback` (or your production URL) to Auth → URL Configuration → Redirect URLs. Without this, Supabase will not redirect users back to your app.
+   - **Site URL**: Set Site URL to your production URL (e.g. `https://party-commander.vercel.app`), not `localhost`.
+   - **Check spam**: Confirmation emails often land in spam. Supabase built-in email has rate limits (≈2/hour).
+   - **Click immediately**: Some email clients prefetch links, which can invalidate the token. Ask users to click the link right after receiving it.
+
 ### Deployment (GitHub + Vercel)
 
 1. **Push to GitHub** (if needed):

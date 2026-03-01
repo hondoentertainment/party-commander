@@ -15,28 +15,43 @@ export function AuthCallback() {
 
     useEffect(() => {
         const run = async () => {
-            const tokenHash = searchParams.get('token_hash')
+            const tokenHash = searchParams.get('token_hash') ?? searchParams.get('token')
             const type = searchParams.get('type')
-            const isOAuthReturn = typeof window !== 'undefined' && window.location.hash.length > 0
+            const code = searchParams.get('code')
+            const hasHash = typeof window !== 'undefined' && window.location.hash.length > 0
 
+            // 1. PKCE flow: exchange code for session
+            if (code) {
+                const { error } = await supabase.auth.exchangeCodeForSession(code)
+                if (error) {
+                    setError(error.message)
+                    return
+                }
+                navigate('/', { replace: true })
+                return
+            }
+
+            // 2. token_hash + type: verify OTP (email signup, magic link)
             if (tokenHash && type) {
                 const { error } = await AuthService.verifyOtp(tokenHash, type)
                 if (error) {
                     setError(error.message)
                     return
                 }
+                navigate('/', { replace: true })
+                return
             }
 
-            // For OAuth, Supabase processes the hash asynchronously; poll briefly for session.
-            const maxAttempts = 10
-            const delayMs = 150
+            // 3. Implicit flow: tokens in URL hash; client auto-parses; poll for session
+            const maxAttempts = 15
+            const delayMs = 200
             for (let i = 0; i < maxAttempts; i++) {
                 const { data } = await supabase.auth.getSession()
                 if (data.session) {
                     navigate('/', { replace: true })
                     return
                 }
-                if (!isOAuthReturn && !tokenHash) break
+                if (!hasHash) break
                 await new Promise((r) => setTimeout(r, delayMs))
             }
 
@@ -46,9 +61,9 @@ export function AuthCallback() {
                 return
             }
 
-            if (!tokenHash && !type && !isOAuthReturn) {
+            if (!tokenHash && !type && !code && !hasHash) {
                 setError('Invalid auth callback. No session or verification params.')
-            } else if (isOAuthReturn || tokenHash) {
+            } else {
                 setError('Sign-in could not be completed. Please try again.')
             }
         }
