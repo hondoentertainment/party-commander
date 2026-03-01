@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { supabase, AuthService } from '../services/auth'
+import { supabase, AuthService, getAuthRedirectUrl } from '../services/auth'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
@@ -17,6 +17,7 @@ export function AuthGate() {
     const [mode, setMode] = useState<'signin' | 'signup'>('signup')
     const [authMethod, setAuthMethod] = useState<'password' | 'magic' | null>(null)
     const [magicLinkSent, setMagicLinkSent] = useState(false)
+    const [emailConfirmationSent, setEmailConfirmationSent] = useState(false)
 
     if (!state.auth.initialized) {
         return (
@@ -36,11 +37,20 @@ export function AuthGate() {
         setError(null)
 
         try {
-            const { error } = mode === 'signin'
+            const result = mode === 'signin'
                 ? await supabase.auth.signInWithPassword({ email, password })
-                : await supabase.auth.signUp({ email, password })
+                : await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { emailRedirectTo: getAuthRedirectUrl() },
+                })
 
-            if (error) throw error
+            if (result.error) throw result.error
+
+            // Sign up with email confirmation: success but no session until user confirms
+            if (mode === 'signup' && result.data.user && !result.data.session) {
+                setEmailConfirmationSent(true)
+            }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Authentication failed')
         } finally {
@@ -82,9 +92,10 @@ export function AuthGate() {
         supabase.auth.signInWithPassword({ email: 'demo@party.com', password: 'password' })
     }
 
-    const showPasswordForm = authMethod === 'password' || (!authMethod && !magicLinkSent)
+    const showPasswordForm = authMethod === 'password' || (!authMethod && !magicLinkSent && !emailConfirmationSent)
     const showMagicForm = authMethod === 'magic' && !magicLinkSent
     const showMagicSuccess = authMethod === 'magic' && magicLinkSent
+    const showEmailConfirmSuccess = emailConfirmationSent
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-[#020617] px-6 py-12">
@@ -111,14 +122,14 @@ export function AuthGate() {
                     <div className="mt-6 flex rounded-2xl border border-white/10 bg-black/20 p-1">
                         <button
                             type="button"
-                            onClick={() => setMode('signin')}
+                            onClick={() => { setMode('signin'); setEmailConfirmationSent(false) }}
                             className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${mode === 'signin' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}
                         >
                             Sign In
                         </button>
                         <button
                             type="button"
-                            onClick={() => setMode('signup')}
+                            onClick={() => { setMode('signup'); setEmailConfirmationSent(false) }}
                             className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${mode === 'signup' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}
                         >
                             Sign Up
@@ -184,6 +195,35 @@ export function AuthGate() {
                                 <span className="bg-black/40 px-3">or</span>
                             </div>
                         </div>
+
+                        {/* Email confirmation required (sign up with confirm enabled) */}
+                        <AnimatePresence>
+                            {showEmailConfirmSuccess && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0 }}
+                                    className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-4"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <MailCheck className="size-5 shrink-0 text-emerald-400" />
+                                        <div>
+                                            <p className="font-semibold text-emerald-200">Check your email</p>
+                                            <p className="mt-1 text-sm text-slate-300">
+                                                We sent a confirmation link to <span className="font-medium text-white">{email}</span>. Click the link to activate your account.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEmailConfirmationSent(false)}
+                                                className="mt-3 text-xs font-medium text-emerald-400 hover:underline"
+                                            >
+                                                Use a different email
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Magic link success */}
                         <AnimatePresence>

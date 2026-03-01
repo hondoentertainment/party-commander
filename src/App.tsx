@@ -1,5 +1,5 @@
 import './App.css'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { ModuleGuard } from './components/ModuleGuard'
 import { AuthGate } from './components/AuthGate'
@@ -39,7 +39,8 @@ function App() {
             <Route path="/invites" element={<InvitesPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/leads" element={<LeadsPage />} />
-            <Route path="/menu" element={<MenuPage />} />
+            <Route path="/food" element={<MenuPage />} />
+            <Route path="/menu" element={<Navigate to="/food" replace />} />
             <Route path="/drinks" element={<DrinksPage />} />
             <Route path="/decor" element={<DecorPage />} />
             <Route path="/cleaning" element={<CleaningPage />} />

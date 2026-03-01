@@ -59,7 +59,7 @@ export function Dashboard() {
         ['full', 'three_quarter', 'half'].includes(state.venue.propane.level),
       icon: <Sparkles className="size-4" />,
     },
-    { label: 'Menu', ready: state.menu.items.length > 0, icon: <Utensils className="size-4" /> },
+    { label: 'Food', ready: state.menu.items.length > 0, icon: <Utensils className="size-4" /> },
     { label: 'Drinks', ready: state.drinks.suggestions.length > 0, icon: <GlassWater className="size-4" /> },
     {
       label: 'Supplies',

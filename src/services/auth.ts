@@ -46,10 +46,15 @@ export const AuthService = {
         return { error }
     },
 
-    async verifyMagicLink(token_hash: string, type: string) {
+    async verifyOtp(token_hash: string, type: string) {
+        // Map URL types to verifyOtp types: signup/magiclink -> email, recovery -> recovery
+        const otpType =
+            type === 'recovery' ? 'recovery' as const
+            : (type === 'signup' || type === 'magiclink') ? 'email' as const
+            : (type === 'invite' ? 'invite' as const : 'email' as const)
         const { error } = await supabase.auth.verifyOtp({
             token_hash,
-            type: type as 'email',
+            type: otpType,
         })
         return { error }
     },

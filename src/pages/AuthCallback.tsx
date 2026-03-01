@@ -20,7 +20,7 @@ export function AuthCallback() {
             const isOAuthReturn = typeof window !== 'undefined' && window.location.hash.length > 0
 
             if (tokenHash && type) {
-                const { error } = await AuthService.verifyMagicLink(tokenHash, type)
+                const { error } = await AuthService.verifyOtp(tokenHash, type)
                 if (error) {
                     setError(error.message)
                     return

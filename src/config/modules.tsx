@@ -23,7 +23,7 @@ export type ModuleId =
   | 'invites'
   | 'events'
   | 'leads'
-  | 'menu'
+  | 'food'
   | 'drinks'
   | 'decor'
   | 'cleaning'
@@ -52,7 +52,7 @@ export const MODULES: ModuleConfig[] = [
   { id: 'invites', to: '/invites', label: 'Invites', icon: Users, canDisable: true },
   { id: 'events', to: '/events', label: 'Events', icon: CalendarClock, canDisable: true },
   { id: 'leads', to: '/leads', label: 'Leads', icon: Users, canDisable: true },
-  { id: 'menu', to: '/menu', label: 'Menu', icon: UtensilsCrossed, canDisable: true },
+  { id: 'food', to: '/food', label: 'Food', icon: UtensilsCrossed, canDisable: true },
   { id: 'drinks', to: '/drinks', label: 'Drinks', icon: Sparkles, canDisable: true },
   { id: 'decor', to: '/decor', label: 'Decor', icon: Wand2, canDisable: true },
   { id: 'cleaning', to: '/cleaning', label: 'Cleaning', icon: ClipboardList, canDisable: true },
