@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Loader2, Shield, Zap, Heart, Music, CheckCircle2 } from 'lucide-react'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
-import { runSwarmAnalysis, AgentResponse, AgentRole } from '../services/swarm'
+import { runSwarmAnalysis, type AgentResponse, type AgentRole } from '../services/swarm'
 import { useParty } from '../state/PartyContext'
 import { cn } from './ui/utils'
 
