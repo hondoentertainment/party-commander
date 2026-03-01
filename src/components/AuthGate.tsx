@@ -4,9 +4,77 @@ import { supabase, AuthService, getAuthRedirectUrl } from '../services/auth'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
-import { Sparkles, Lock, Loader2, ShieldCheck, Mail, MailCheck } from 'lucide-react'
+import { Sparkles, Lock, Loader2, ShieldCheck, Mail, MailCheck, ShieldX } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParty } from '../state/PartyContext'
+
+/** Parse the VITE_ALLOWED_EMAIL_DOMAINS env var into a lowercase domain list. */
+function getAllowedDomains(): string[] {
+    return (import.meta.env.VITE_ALLOWED_EMAIL_DOMAINS || '')
+        .split(',')
+        .map((d: string) => d.trim().toLowerCase())
+        .filter(Boolean)
+}
+
+/** Return true if the given email is permitted to access the command center. */
+function isDomainAllowed(email: string): boolean {
+    const domains = getAllowedDomains()
+    if (domains.length === 0) return true
+    const domain = email.split('@')[1]?.toLowerCase() ?? ''
+    return domains.includes(domain)
+}
+
+function AccessDenied({ email }: { email: string }) {
+    const domain = email.split('@')[1] ?? ''
+    const allowed = getAllowedDomains()
+
+    const handleSignOut = () => supabase.auth.signOut()
+
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-[#020617] px-6 py-12">
+            <div className="glow-orb" />
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-md text-center"
+            >
+                <div className="mx-auto flex size-16 items-center justify-center rounded-[2rem] bg-rose-500/10 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+                    <ShieldX className="size-8 text-rose-400" />
+                </div>
+                <h1 className="mt-6 text-3xl font-bold tracking-tight text-white">Access Denied</h1>
+                <p className="mt-2 text-slate-400">
+                    Your email domain{' '}
+                    <span className="font-semibold text-rose-400">@{domain}</span>{' '}
+                    is not authorized to access this command center.
+                </p>
+
+                {allowed.length > 0 && (
+                    <div className="mt-4 rounded-2xl border border-white/5 bg-black/30 px-4 py-3 text-sm text-slate-500">
+                        Allowed:{' '}
+                        {allowed.map((d) => (
+                            <span key={d} className="mx-1 font-mono text-slate-400">@{d}</span>
+                        ))}
+                    </div>
+                )}
+
+                <div className="mt-8 flex flex-col gap-3">
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        className="w-full rounded-2xl border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                        onClick={handleSignOut}
+                    >
+                        Sign out &amp; try a different account
+                    </Button>
+                </div>
+
+                <p className="mt-6 text-xs text-slate-600">
+                    Signed in as <span className="text-slate-500">{email}</span>
+                </p>
+            </motion.div>
+        </div>
+    )
+}
 
 export function AuthGate() {
     const { state } = useParty()
@@ -28,6 +96,10 @@ export function AuthGate() {
     }
 
     if (state.auth.user) {
+        const userEmail: string = state.auth.user.email ?? ''
+        if (!isDomainAllowed(userEmail)) {
+            return <AccessDenied email={userEmail} />
+        }
         return <Outlet />
     }
 
@@ -119,6 +191,17 @@ export function AuthGate() {
                             ? 'Sign up to create your party profile and plan events.'
                             : 'Sign in to access your party command center.'}
                     </p>
+                    {getAllowedDomains().length > 0 && (
+                        <p className="mt-2 text-xs text-slate-500">
+                            Requires an email ending in{' '}
+                            {getAllowedDomains().map((d, i, arr) => (
+                                <span key={d}>
+                                    <span className="font-mono text-emerald-500/70">@{d}</span>
+                                    {i < arr.length - 1 ? ' or ' : ''}
+                                </span>
+                            ))}
+                        </p>
+                    )}
                     <div className="mt-6 flex rounded-2xl border border-white/10 bg-black/20 p-1">
                         <button
                             type="button"
