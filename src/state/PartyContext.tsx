@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { v4 as uuid } from 'uuid'
 import { supabase } from '../services/auth'
 import { PartyProfileService, type PartyProfile } from '../services/partyProfile'
 import { PartyService, type PartyRow } from '../services/parties'
@@ -15,6 +16,18 @@ import { applyEngines } from './engines'
 import { defaultPartyState } from './defaults'
 import { getLastPartyId, loadState, saveState, setLastPartyId } from './storage'
 import type { PartyState } from './types'
+import type { PartyEvent } from './types'
+
+/** Ensure each event has a unique id for shareability and sync across collaborators */
+function normalizeEvents(items: PartyEvent[] | undefined): PartyEvent[] {
+  if (!Array.isArray(items)) return []
+  const seen = new Set<string>()
+  return items.map((e) => {
+    const id = e?.id && typeof e.id === 'string' && !seen.has(e.id) ? e.id : uuid()
+    seen.add(id)
+    return { ...e, id }
+  })
+}
 
 type PartyAction =
   | { type: 'set_state'; payload: PartyState }
@@ -47,6 +60,11 @@ function mergeStoredWithDefaults(stored: Partial<PartyState> | null): PartyState
           ...defaultPartyState.budget,
           ...(stored.budget ?? {}),
           lineItems: stored.budget?.lineItems ?? defaultPartyState.budget.lineItems,
+        },
+        events: {
+          ...defaultPartyState.events,
+          ...stored.events,
+          items: normalizeEvents(stored.events?.items),
         },
         photoVideo: {
           ...defaultPartyState.photoVideo,

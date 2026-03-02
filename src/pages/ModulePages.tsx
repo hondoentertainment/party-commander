@@ -7,7 +7,33 @@ import { Card, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Textarea } from '../components/ui/Textarea'
-import { Download, ImagePlus, Trash2, Sparkles, Loader2, Lightbulb, RotateCcw } from 'lucide-react'
+import {
+  Copy,
+  Download,
+  ImagePlus,
+  Trash2,
+  Sparkles,
+  Loader2,
+  Lightbulb,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+} from 'lucide-react'
+import {
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  format,
+  isSameMonth,
+  isSameDay,
+  differenceInDays,
+  parseISO,
+  isBefore,
+  startOfDay,
+} from 'date-fns'
 import { getShoppingListItems } from '../state/engines'
 import { generateBudgetOptimization } from '../services/ai'
 import type { DrinkSuggestion, GalleryPhoto, ShoppingListBaseKey } from '../state/types'
@@ -460,6 +486,7 @@ export function InvitesPage() {
 
 export function EventsPage() {
   const { state, dispatch } = useParty()
+  const [copiedEventId, setCopiedEventId] = useState<string | null>(null)
   const [draft, setDraft] = useState({
     name: '',
     date: '',
@@ -468,6 +495,16 @@ export function EventsPage() {
     notes: '',
     leadName: '',
   })
+
+  const copyEventId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id)
+      setCopiedEventId(id)
+      window.setTimeout(() => setCopiedEventId(null), 1500)
+    } catch {
+      setCopiedEventId(null)
+    }
+  }
 
   const addEvent = () => {
     if (!draft.name.trim()) return
@@ -606,7 +643,23 @@ export function EventsPage() {
                     rows={2}
                   />
                 </div>
-                <div className="mt-3 flex justify-end">
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyEventId(event.id)}
+                    className="text-xs text-slate-400 hover:text-white"
+                    title="Copy event ID to share with collaborators"
+                  >
+                    {copiedEventId === event.id ? (
+                      'Copied'
+                    ) : (
+                      <>
+                        <Copy className="mr-1.5 size-3.5" aria-hidden />
+                        Copy event ID
+                      </>
+                    )}
+                  </Button>
                   <Button variant="outline" onClick={() => removeEvent(event.id)}>
                     Remove
                   </Button>
@@ -1608,10 +1661,123 @@ export function TimelinePage() {
     URL.revokeObjectURL(url)
   }
 
+  const partyDate = state.core.date ? parseISO(state.core.date) : null
+  const isValidPartyDate = partyDate && !isNaN(partyDate.getTime())
+  const today = startOfDay(new Date())
+  const daysToEvent = isValidPartyDate
+    ? differenceInDays(startOfDay(partyDate), today)
+    : null
+  const isEventUpcoming = daysToEvent !== null && daysToEvent >= 0
+
+  const [calendarMonth, setCalendarMonth] = useState(() =>
+    isValidPartyDate ? startOfMonth(partyDate) : startOfMonth(new Date()),
+  )
+  const monthStart = startOfMonth(calendarMonth)
+  const monthEnd = endOfMonth(calendarMonth)
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  const firstDayOffset = monthStart.getDay()
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Timeline</h3>
       <p className="text-sm text-slate-300">Tasks relative to party start.</p>
+
+      <Card>
+        <CardTitle className="flex items-center gap-2">
+          <CalendarDays className="size-5 text-emerald-400" />
+          Days to event
+        </CardTitle>
+        <div className="mt-4 flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+          {isValidPartyDate && (
+            <div className="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-emerald-500/10 px-8 py-6 ring-1 ring-emerald-500/20">
+              {isEventUpcoming ? (
+                <>
+                  <span className="text-5xl font-bold tabular-nums text-emerald-400">
+                    {daysToEvent}
+                  </span>
+                  <span className="mt-1 text-sm font-semibold uppercase tracking-wider text-slate-400">
+                    {daysToEvent === 0
+                      ? "Today's the day!"
+                      : daysToEvent === 1
+                        ? 'day to go'
+                        : 'days to go'}
+                  </span>
+                </>
+              ) : (
+                <span className="text-lg font-semibold text-slate-400">Event passed</span>
+              )}
+              <span className="mt-2 text-xs text-slate-500">
+                {format(partyDate, 'EEEE, MMM d, yyyy')}
+              </span>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="mb-3 flex items-center justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
+                aria-label="Previous month"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-sm font-semibold text-white">
+                {format(calendarMonth, 'MMMM yyyy')}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
+                aria-label="Next month"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl bg-white/5">
+              {weekDays.map((d) => (
+                <div
+                  key={d}
+                  className="py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-500"
+                >
+                  {d}
+                </div>
+              ))}
+              {Array.from({ length: firstDayOffset }).map((_, i) => (
+                <div key={`pad-${i}`} className="aspect-square" />
+              ))}
+              {days.map((day) => {
+                const isPartyDay = Boolean(isValidPartyDate && isSameDay(day, partyDate))
+                const isToday = isSameDay(day, today)
+                const isPast = isBefore(day, today) && !isSameDay(day, today)
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={cn(
+                      'flex aspect-square items-center justify-center text-xs font-medium transition',
+                      !isSameMonth(day, calendarMonth) && 'text-slate-600',
+                      isPartyDay && 'rounded-lg bg-emerald-500 text-white ring-2 ring-emerald-400/50',
+                      isToday && !isPartyDay && 'rounded-lg ring-1 ring-slate-500 text-slate-200',
+                      isPast && !isPartyDay && 'text-slate-600 opacity-60',
+                    )}
+                  >
+                    {format(day, 'd')}
+                  </div>
+                )
+              })}
+            </div>
+            {!state.core.date && (
+              <p className="mt-3 text-xs text-slate-500">
+                Set your party date in the dashboard to see the countdown.
+              </p>
+            )}
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <CardTitle>Add timeline task</CardTitle>
