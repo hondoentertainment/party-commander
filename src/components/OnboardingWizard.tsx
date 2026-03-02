@@ -19,8 +19,8 @@ export function OnboardingWizard() {
     const [currentStep, setCurrentStep] = useState(0)
     const [creating, setCreating] = useState(false)
 
-    // Show when: no party yet (new user or no parties created)
-    if (partyProfile && parties && parties.length > 0) return null
+    // Hide when: has parties, or user dismissed onboarding
+    if (state.core.onboardingComplete || (partyProfile && parties && parties.length > 0)) return null
 
     const next = () => {
         if (currentStep < steps.length - 1) {
@@ -32,10 +32,14 @@ export function OnboardingWizard() {
         if (!state.core.name) {
             dispatch({ type: 'update_core', payload: { name: 'Untethered Soirée' } })
         }
+        // Dismiss immediately so the wizard screen disappears
+        dispatch({ type: 'update_core', payload: { onboardingComplete: true } })
         if (partyProfile) {
             setCreating(true)
             try {
                 await createParty()
+            } catch {
+                // Party creation failed; user still has local state via saveState
             } finally {
                 setCreating(false)
             }

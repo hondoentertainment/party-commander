@@ -17,6 +17,8 @@ export interface PartyCore {
   customTheme: string
   date: string
   location: string
+  /** Set when user completes onboarding wizard; hides the wizard even before party is created */
+  onboardingComplete?: boolean
 }
 
 export interface Invites {
