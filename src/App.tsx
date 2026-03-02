@@ -2,12 +2,12 @@ import './App.css'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { ModuleGuard } from './components/ModuleGuard'
+import { AdminGuard } from './components/AdminGuard'
 import { AuthGate } from './components/AuthGate'
 import { AuthCallback } from './pages/AuthCallback'
 import { AdminPage } from './pages/AdminPage'
 import { InvitePage } from './pages/InvitePage'
 import { Dashboard } from './pages/Dashboard'
-import { PlanPage } from './pages/PlanPage'
 import { ProfilePage } from './pages/ProfilePage'
 import {
   BudgetPage,
@@ -37,8 +37,7 @@ function App() {
         <Route element={<AuthGate />}>
           <Route element={<ModuleGuard />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/plan" element={<PlanPage />} />
-            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
             <Route path="/budget" element={<BudgetPage />} />
             <Route path="/invites" element={<InvitesPage />} />
             <Route path="/events" element={<EventsPage />} />

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { MODULES } from '../config/modules'
 import { useParty } from '../state/PartyContext'
+import { isAdminEmail } from '../utils/admin'
 
 function isModuleEnabled(modules: Record<string, boolean>, id: string): boolean {
   return modules[id] !== false
@@ -8,7 +9,11 @@ function isModuleEnabled(modules: Record<string, boolean>, id: string): boolean 
 
 export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
   const { state } = useParty()
-  const navItems = MODULES.filter((m) => isModuleEnabled(state.admin.modules, m.id))
+  const isAdmin = isAdminEmail(state.auth.user?.email)
+  const navItems = MODULES.filter((m) => {
+    if (m.id === 'admin') return isAdmin && isModuleEnabled(state.admin.modules, m.id)
+    return isModuleEnabled(state.admin.modules, m.id)
+  })
 
   return (
     <nav

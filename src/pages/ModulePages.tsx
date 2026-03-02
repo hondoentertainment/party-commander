@@ -1948,26 +1948,30 @@ export function CleaningPage() {
 
       <Card>
         <CardTitle>Bathroom essentials</CardTitle>
-        <div className="mt-4 space-y-3">
-          <div className="grid gap-3 md:grid-cols-2">
-            {state.cleaning.bathroomSupplies.map((item) => (
-              <Button
-                key={item.id}
-                type="button"
-                onClick={() => toggleBathroomSupply(item.id)}
-                variant="outline"
-                className={[
-                  'flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold',
-                  item.status === 'done' ? 'bg-emerald-500/20 text-emerald-200' : '',
-                ].join(' ')}
-              >
+        <div className="mt-4 space-y-2">
+          {state.cleaning.bathroomSupplies.map((item) => (
+            <label
+              key={item.id}
+              className={cn(
+                'flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors',
+                item.status === 'done'
+                  ? 'bg-emerald-500/20 text-emerald-200'
+                  : 'bg-white/5 text-slate-300 hover:bg-white/10',
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={item.status === 'done'}
+                onChange={() => toggleBathroomSupply(item.id)}
+                className="size-4 shrink-0 rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-emerald-500/50"
+                aria-label={item.name}
+              />
+              <span className={cn(item.status === 'done' && 'line-through opacity-80')}>
                 {item.name}
-                <span className="text-xs uppercase">
-                  {item.status === 'done' ? 'ready' : 'needs'}
-                </span>
-              </Button>
-            ))}
-          </div>
+              </span>
+            </label>
+          ))}
+        </div>
           {bathroomExtras.length > 0 && (
             <div className="mt-4 border-t border-white/10 pt-4">
               <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Additional items</p>
@@ -1977,23 +1981,28 @@ export function CleaningPage() {
                     key={item.id}
                     className="flex items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-2"
                   >
-                    <Button
-                      type="button"
-                      variant="ghost"
+                    <label
                       className={cn(
-                        'flex-1 text-left text-sm',
-                        item.status === 'done' && 'text-emerald-300 line-through',
+                        'flex flex-1 cursor-pointer items-center gap-3 text-sm',
+                        item.status === 'done' && 'text-emerald-300 line-through opacity-80',
                       )}
-                      onClick={() => toggleBathroomExtra(item.id)}
                     >
+                      <input
+                        type="checkbox"
+                        checked={item.status === 'done'}
+                        onChange={() => toggleBathroomExtra(item.id)}
+                        className="size-4 shrink-0 rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-emerald-500/50"
+                        aria-label={`${item.name} quantity ${item.quantity}`}
+                      />
                       {item.name} × {item.quantity}
-                    </Button>
+                    </label>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-slate-400 hover:text-rose-400"
+                      className="shrink-0 text-slate-400 hover:text-rose-400"
                       onClick={() => removeBathroomExtra(item.id)}
+                      aria-label={`Remove ${item.name}`}
                     >
                       <Trash2 className="size-4" />
                     </Button>
