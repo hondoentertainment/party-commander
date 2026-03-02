@@ -14,8 +14,6 @@ import {
   ImagePlus,
   Trash2,
   Sparkles,
-  Loader2,
-  Lightbulb,
   RotateCcw,
   ChevronLeft,
   ChevronRight,
@@ -36,7 +34,6 @@ import {
   startOfDay,
 } from 'date-fns'
 import { getShoppingListItems } from '../state/engines'
-import { generateBudgetOptimization } from '../services/ai'
 import type { DrinkSuggestion, GalleryPhoto, ShoppingListBaseKey } from '../state/types'
 import type { BudgetLineItem, Theme } from '../state/types'
 
@@ -54,8 +51,6 @@ function sumDecorCosts(decorItems: { cost: string }[]): number {
 
 export function BudgetPage() {
   const { state, dispatch } = useParty()
-  const [loading, setLoading] = useState(false)
-  const [tips, setTips] = useState<string[] | null>(null)
   const [draft, setDraft] = useState({
     label: '',
     category: 'decor' as BudgetLineItem['category'],
@@ -68,18 +63,6 @@ export function BudgetPage() {
   const totalSpent = manualTotal + decorTotal
   const limit = state.budget.limit ?? 0
   const overBudget = limit > 0 && totalSpent > limit
-
-  const handleOptimize = async () => {
-    setLoading(true)
-    try {
-      const result = await generateBudgetOptimization(state.budget.lineItems, state.budget.limit)
-      setTips(result || ['AI Analysis failed. Please try again.'])
-    } catch (e) {
-      setTips(['An unexpected error occurred.'])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const addLineItem = () => {
     if (!draft.label.trim() && draft.amount <= 0) return
@@ -166,39 +149,6 @@ export function BudgetPage() {
             ) : null}
           </label>
         </div>
-      </Card>
-
-      <Card className="border-emerald-500/10 bg-emerald-500/5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-              <Sparkles className="size-5 text-emerald-400" />
-            </div>
-            <div>
-              <CardTitle>AI Optimizer</CardTitle>
-              <p className="text-xs text-slate-400">Get world-class savings strategies.</p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            onClick={handleOptimize}
-            disabled={loading || state.budget.lineItems.length === 0}
-            className="rounded-xl"
-          >
-            {loading ? <Loader2 className="size-4 animate-spin" /> : 'Analyze Budget'}
-          </Button>
-        </div>
-
-        {tips && (
-          <div className="mt-6 space-y-3">
-            {tips.map((tip, i) => (
-              <div key={i} className="flex gap-3 rounded-xl bg-black/40 p-4 text-sm text-slate-300 border border-white/5 transition-all hover:bg-black/60 group">
-                <Lightbulb className="size-5 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
-                <span>{tip}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </Card>
 
       <Card>
