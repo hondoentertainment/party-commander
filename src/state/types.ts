@@ -54,10 +54,19 @@ export interface DrinkSuggestion {
 
 export type ShoppingListBaseKey = 'ice' | 'cups' | 'napkins'
 
+/** Drink quantity for planning (name, number of servings/batches) */
+export interface DrinkQuantity {
+  id: string
+  name: string
+  quantity: number
+}
+
 export interface DrinksState {
   suggestions: DrinkSuggestion[]
   shoppingList: string[]
   extraItems: string[]
+  /** Table of drink names and quantities for planning */
+  quantities?: DrinkQuantity[]
   /** User overrides for base shopping list items (ice, cups, napkins) */
   shoppingListOverrides?: Partial<Record<ShoppingListBaseKey, string>>
   /** Base items to hide from the list */
@@ -96,11 +105,22 @@ export interface BathroomSupply {
   id: string
   name: string
   status: ItemStatus
+  quantity?: number
+}
+
+/** Extra bathroom item added by user */
+export interface BathroomExtraItem {
+  id: string
+  name: string
+  quantity: number
+  status: ItemStatus
 }
 
 export interface CleaningState {
   checklists: CleaningChecklist[]
   bathroomSupplies: BathroomSupply[]
+  /** Additional bathroom items added by user */
+  bathroomExtras?: BathroomExtraItem[]
 }
 
 export interface TimelineTask {
@@ -133,6 +153,8 @@ export interface Game {
   groupSize: string
   rules: string
   supplies: string[]
+  /** Optional link to access the game (e.g. rules page, external game) */
+  link?: string
 }
 
 export interface GamesState {
@@ -282,4 +304,10 @@ export interface PartyEvent {
   notes: string
   /** Person responsible for this event */
   leadName?: string
+  /** Per-event tasks (timeline tasks for this event) */
+  tasks?: TimelineTask[]
+  /** Per-event lead assignments */
+  leads?: LeadAssignment[]
+  /** Per-event menu items */
+  menuItems?: MenuItem[]
 }

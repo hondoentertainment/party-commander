@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
 import { v4 as uuid } from 'uuid'
@@ -484,9 +485,29 @@ export function InvitesPage() {
   )
 }
 
+const DEFAULT_LEADS = [
+  { id: 'budget', function: 'Budget', leadName: '' },
+  { id: 'invites', function: 'Invites', leadName: '' },
+  { id: 'events', function: 'Events', leadName: '' },
+  { id: 'leads', function: 'Leads', leadName: '' },
+  { id: 'food', function: 'Food', leadName: '' },
+  { id: 'drinks', function: 'Drinks', leadName: '' },
+  { id: 'decor', function: 'Decor & Ambience', leadName: '' },
+  { id: 'cleaning', function: 'Cleaning & Bathroom', leadName: '' },
+  { id: 'timeline', function: 'Timeline & Calendar', leadName: '' },
+  { id: 'music', function: 'Music Hub', leadName: '' },
+  { id: 'games', function: 'Game Generator', leadName: '' },
+  { id: 'venue', function: 'Venue & Rooftop', leadName: '' },
+  { id: 'entry', function: 'Entry Mode', leadName: '' },
+  { id: 'live', function: 'Live Party', leadName: '' },
+  { id: 'post_party', function: 'Post-Party Wrap', leadName: '' },
+  { id: 'photo_video', function: 'Photo/Video Shoot', leadName: '' },
+] as const
+
 export function EventsPage() {
   const { state, dispatch } = useParty()
   const [copiedEventId, setCopiedEventId] = useState<string | null>(null)
+  const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [draft, setDraft] = useState({
     name: '',
     date: '',
@@ -495,6 +516,19 @@ export function EventsPage() {
     notes: '',
     leadName: '',
   })
+
+  const today = startOfDay(new Date())
+  const activeEvents = state.events.items.filter((e) => {
+    if (!e.date) return true
+    const d = parseISO(e.date)
+    return !isNaN(d.getTime()) && !isBefore(startOfDay(d), today)
+  })
+  const pastEvents = state.events.items.filter((e) => {
+    if (!e.date) return false
+    const d = parseISO(e.date)
+    return !isNaN(d.getTime()) && isBefore(startOfDay(d), today)
+  })
+  const displayedEvents = showActiveOnly ? activeEvents : state.events.items
 
   const copyEventId = async (id: string) => {
     try {
@@ -536,10 +570,52 @@ export function EventsPage() {
     })
   }
 
+  const copyLeadsToEvent = (sourceEventId: string, targetEventId: string) => {
+    const source = state.events.items.find((e) => e.id === sourceEventId)
+    const leads = source?.leads?.length ? [...source.leads] : DEFAULT_LEADS.map((l) => ({ ...l, id: uuid() }))
+    const targetLeads = leads.map((l) => ({ ...l, id: uuid() }))
+    updateEvent(targetEventId, { leads: targetLeads })
+  }
+
+  const copyPartyLeadsToEvent = (targetEventId: string) => {
+    const leads = state.leads.items.map((l) => ({ ...l, id: uuid() }))
+    updateEvent(targetEventId, { leads })
+  }
+
+  const copyMenuToEvent = (sourceEventId: string, targetEventId: string) => {
+    const source = state.events.items.find((e) => e.id === sourceEventId)
+    const menuItems = source?.menuItems?.length ? source.menuItems.map((m) => ({ ...m, id: uuid() })) : state.menu.items.map((m) => ({ ...m, id: uuid() }))
+    updateEvent(targetEventId, { menuItems })
+  }
+
+  const copyPartyMenuToEvent = (targetEventId: string) => {
+    const menuItems = state.menu.items.map((m) => ({ ...m, id: uuid() }))
+    updateEvent(targetEventId, { menuItems })
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Events</h3>
       <p className="text-sm text-slate-300">Add upcoming events and keep an archive.</p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant={showActiveOnly ? 'primary' : 'outline'}
+          size="sm"
+          onClick={() => setShowActiveOnly(true)}
+        >
+          Active events ({activeEvents.length})
+        </Button>
+        <Button
+          type="button"
+          variant={!showActiveOnly ? 'primary' : 'outline'}
+          size="sm"
+          onClick={() => setShowActiveOnly(false)}
+        >
+          All events
+        </Button>
+      </div>
 
       <Card>
         <CardTitle>Add event</CardTitle>
@@ -606,11 +682,13 @@ export function EventsPage() {
 
       <Card>
         <CardTitle>Event list</CardTitle>
-        {state.events.items.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No events yet.</p>
+        {displayedEvents.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">
+            {showActiveOnly && pastEvents.length > 0 ? 'No active events. Switch to "All events" to see past ones.' : 'No events yet.'}
+          </p>
         ) : (
           <div className="mt-4 space-y-3">
-            {state.events.items.map((event) => (
+            {displayedEvents.map((event) => (
               <div key={event.id} className="rounded-xl bg-white/5 px-4 py-3 text-sm">
                 <div className="grid gap-2 md:grid-cols-2">
                   <Input
@@ -643,26 +721,60 @@ export function EventsPage() {
                     rows={2}
                   />
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyEventId(event.id)}
-                    className="text-xs text-slate-400 hover:text-white"
-                    title="Copy event ID to share with collaborators"
-                  >
-                    {copiedEventId === event.id ? (
-                      'Copied'
-                    ) : (
-                      <>
-                        <Copy className="mr-1.5 size-3.5" aria-hidden />
-                        Copy event ID
-                      </>
-                    )}
-                  </Button>
-                  <Button variant="outline" onClick={() => removeEvent(event.id)}>
-                    Remove
-                  </Button>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-slate-500">Copy to this event:</span>
+                    <Select
+                      value=""
+                      onChange={(e) => {
+                        const src = e.target.value
+                        if (src) {
+                          if (src === '__party__') copyPartyLeadsToEvent(event.id)
+                          else copyLeadsToEvent(src, event.id)
+                          e.target.value = ''
+                        }
+                      }}
+                      className="h-7 text-xs"
+                    >
+                      <option value="">Leads from...</option>
+                      {state.events.items.filter((ev) => ev.id !== event.id).map((ev) => (
+                        <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed'}</option>
+                      ))}
+                      <option value="__party__">Party default</option>
+                    </Select>
+                    <Select
+                      value=""
+                      onChange={(e) => {
+                        const src = e.target.value
+                        if (src) {
+                          if (src === '__party__') copyPartyMenuToEvent(event.id)
+                          else copyMenuToEvent(src, event.id)
+                          e.target.value = ''
+                        }
+                      }}
+                      className="h-7 text-xs"
+                    >
+                      <option value="">Menu from...</option>
+                      {state.events.items.filter((ev) => ev.id !== event.id).map((ev) => (
+                        <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed'}</option>
+                      ))}
+                      <option value="__party__">Party menu</option>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyEventId(event.id)}
+                      className="text-xs text-slate-400 hover:text-white"
+                      title="Copy event ID to share with collaborators"
+                    >
+                      {copiedEventId === event.id ? 'Copied' : <> <Copy className="mr-1.5 size-3.5" aria-hidden />Copy event ID</>}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => removeEvent(event.id)}>
+                      Remove
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -675,8 +787,15 @@ export function EventsPage() {
 
 export function LeadsPage() {
   const { state, dispatch } = useParty()
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
 
-  const updateLead = (id: string, leadName: string) => {
+  const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
+  const selectedEvent = selectedEventId ? state.events.items.find((e) => e.id === selectedEventId) : null
+  const currentLeads = isPartyScope
+    ? state.leads.items
+    : (selectedEvent?.leads ?? DEFAULT_LEADS.map((l) => ({ ...l, id: uuid() })))
+
+  const updatePartyLead = (id: string, leadName: string) => {
     dispatch({
       type: 'update_leads',
       payload: {
@@ -687,15 +806,87 @@ export function LeadsPage() {
     })
   }
 
+  const updateEventLead = (id: string, leadName: string) => {
+    if (!selectedEventId || isPartyScope) return
+    dispatch({
+      type: 'update_events',
+      payload: {
+        items: state.events.items.map((ev) =>
+          ev.id === selectedEventId
+            ? {
+                ...ev,
+                leads: (ev.leads ?? DEFAULT_LEADS.map((l) => ({ ...l, id: uuid() }))).map((l) =>
+                  l.id === id ? { ...l, leadName } : l,
+                ),
+              }
+            : ev,
+        ),
+      },
+    })
+  }
+
+  const updateLead = (id: string, leadName: string) => {
+    if (isPartyScope) updatePartyLead(id, leadName)
+    else updateEventLead(id, leadName)
+  }
+
+  const copyLeadsToEvent = (targetEventId: string) => {
+    const leads = currentLeads.map((l) => ({ ...l, id: uuid() }))
+    const target = state.events.items.find((e) => e.id === targetEventId)
+    if (!target) return
+    dispatch({
+      type: 'update_events',
+      payload: {
+        items: state.events.items.map((ev) =>
+          ev.id === targetEventId ? { ...ev, leads } : ev,
+        ),
+      },
+    })
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Leads</h3>
-      <p className="text-sm text-slate-300">Assign a lead to each function.</p>
+      <p className="text-sm text-slate-300">Assign a lead to each function. Leads are per event.</p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-slate-400">Scope:</span>
+        <Select
+          value={selectedEventId ?? '__party__'}
+          onChange={(e) => setSelectedEventId(e.target.value === '__party__' ? null : e.target.value)}
+          className="w-48"
+        >
+          <option value="__party__">Main party</option>
+          {state.events.items.map((ev) => (
+            <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed event'}</option>
+          ))}
+        </Select>
+        {currentLeads.length > 0 && (
+          <Select
+            value=""
+            onChange={(e) => {
+              const target = e.target.value
+              if (target) {
+                copyLeadsToEvent(target)
+                e.target.value = ''
+              }
+            }}
+            className="w-40 text-sm"
+          >
+            <option value="">Copy to event...</option>
+            {state.events.items
+              .filter((ev) => ev.id !== selectedEventId)
+              .map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed'}</option>
+              ))}
+          </Select>
+        )}
+      </div>
 
       <Card>
-        <CardTitle>Function leads</CardTitle>
+        <CardTitle>Function leads{!isPartyScope ? ` (${state.events.items.find((e) => e.id === selectedEventId)?.name || 'Event'})` : ''}</CardTitle>
         <div className="mt-4 space-y-3">
-          {state.leads.items.map((lead) => (
+          {currentLeads.map((lead) => (
             <div
               key={lead.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm"
@@ -717,6 +908,7 @@ export function LeadsPage() {
 
 export function MenuPage() {
   const { state, dispatch } = useParty()
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [draft, setDraft] = useState({
     name: '',
     category: 'snacks' as const,
@@ -724,6 +916,11 @@ export function MenuPage() {
     servings: 0,
     notes: '',
   })
+
+  const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
+  const currentMenuItems = isPartyScope
+    ? state.menu.items
+    : (state.events.items.find((e) => e.id === selectedEventId)?.menuItems ?? [])
 
   const addItem = () => {
     if (!draft.name.trim()) return
@@ -735,9 +932,23 @@ export function MenuPage() {
       servings: draft.servings,
       notes: draft.notes.trim(),
     }
-    const nextItems = [...state.menu.items, nextItem]
-    dispatch({ type: 'update_menu', payload: { items: nextItems } })
-    syncFoodTimeline(nextItems)
+    if (isPartyScope) {
+      const nextItems = [...state.menu.items, nextItem]
+      dispatch({ type: 'update_menu', payload: { items: nextItems } })
+      syncFoodTimeline(nextItems)
+    } else {
+      const ev = state.events.items.find((e) => e.id === selectedEventId)
+      if (!ev) return
+      const nextItems = [...(ev.menuItems ?? []), nextItem]
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((e) =>
+            e.id === selectedEventId ? { ...e, menuItems: nextItems } : e,
+          ),
+        },
+      })
+    }
     setDraft({ name: '', category: 'snacks', source: 'make', servings: 0, notes: '' })
   }
 
@@ -773,36 +984,115 @@ export function MenuPage() {
   }
 
   const applySuggestions = () => {
-    if (state.invites.guestCount <= 0 || state.menu.items.length === 0) return
-    const nextItems = state.menu.items.map((item) =>
+    if (state.invites.guestCount <= 0 || currentMenuItems.length === 0) return
+    const nextItems = currentMenuItems.map((item) =>
       item.servings > 0
         ? item
         : { ...item, servings: getSuggestedServings(item.category, state.invites.guestCount) },
     )
-    dispatch({ type: 'update_menu', payload: { items: nextItems } })
-    syncFoodTimeline(nextItems)
+    if (isPartyScope) {
+      dispatch({ type: 'update_menu', payload: { items: nextItems } })
+      syncFoodTimeline(nextItems)
+    } else {
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((e) =>
+            e.id === selectedEventId ? { ...e, menuItems: nextItems } : e,
+          ),
+        },
+      })
+    }
   }
 
   const removeItem = (id: string) => {
-    const nextItems = state.menu.items.filter((item) => item.id !== id)
-    dispatch({ type: 'update_menu', payload: { items: nextItems } })
-    syncFoodTimeline(nextItems)
+    const nextItems = currentMenuItems.filter((item) => item.id !== id)
+    if (isPartyScope) {
+      dispatch({ type: 'update_menu', payload: { items: nextItems } })
+      syncFoodTimeline(nextItems)
+    } else {
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((e) =>
+            e.id === selectedEventId ? { ...e, menuItems: nextItems } : e,
+          ),
+        },
+      })
+    }
   }
 
   const updateItem = (id: string, updates: Partial<(typeof state.menu.items)[0]>) => {
-    const nextItems = state.menu.items.map((item) =>
+    const nextItems = currentMenuItems.map((item) =>
       item.id === id ? { ...item, ...updates } : item,
     )
-    dispatch({ type: 'update_menu', payload: { items: nextItems } })
-    syncFoodTimeline(nextItems)
+    if (isPartyScope) {
+      dispatch({ type: 'update_menu', payload: { items: nextItems } })
+      syncFoodTimeline(nextItems)
+    } else {
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((e) =>
+            e.id === selectedEventId ? { ...e, menuItems: nextItems } : e,
+          ),
+        },
+      })
+    }
+  }
+
+  const copyMenuToEvent = (targetEventId: string) => {
+    const menuItems = currentMenuItems.map((m) => ({ ...m, id: uuid() }))
+    dispatch({
+      type: 'update_events',
+      payload: {
+        items: state.events.items.map((e) =>
+          e.id === targetEventId ? { ...e, menuItems } : e,
+        ),
+      },
+    })
   }
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Menu Builder</h3>
       <p className="text-sm text-slate-300">
-        Add items by category and source to build prep lists.
+        Add items by category and source to build prep lists. Menus are per event.
       </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-slate-400">Scope:</span>
+        <Select
+          value={selectedEventId ?? '__party__'}
+          onChange={(e) => setSelectedEventId(e.target.value === '__party__' ? null : e.target.value)}
+          className="w-48"
+        >
+          <option value="__party__">Main party</option>
+          {state.events.items.map((ev) => (
+            <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed event'}</option>
+          ))}
+        </Select>
+        {currentMenuItems.length > 0 && (
+          <Select
+            value=""
+            onChange={(e) => {
+              const target = e.target.value
+              if (target) {
+                copyMenuToEvent(target)
+                e.target.value = ''
+              }
+            }}
+            className="w-40 text-sm"
+          >
+            <option value="">Copy menu to event...</option>
+            {state.events.items
+              .filter((ev) => ev.id !== selectedEventId)
+              .map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed'}</option>
+              ))}
+          </Select>
+        )}
+      </div>
 
       <Card>
         <CardTitle>Suggested servings</CardTitle>
@@ -816,13 +1106,13 @@ export function MenuPage() {
           <span>Dessert: ~0.4 per guest</span>
           <span>Late-night: ~0.3 per guest</span>
         </div>
-        <Button type="button" className="mt-4" onClick={applySuggestions}>
+        <Button type="button" className="mt-4" onClick={applySuggestions} disabled={currentMenuItems.length === 0}>
           Apply suggestions
         </Button>
       </Card>
 
       <Card>
-        <CardTitle>Add menu item</CardTitle>
+        <CardTitle>Add menu item{!isPartyScope ? ` (${state.events.items.find((e) => e.id === selectedEventId)?.name || 'Event'})` : ''}</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="text-sm text-slate-300">
             Item name
@@ -891,11 +1181,11 @@ export function MenuPage() {
 
       <Card>
         <CardTitle>Menu list</CardTitle>
-        {state.menu.items.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No items yet.</p>
+        {currentMenuItems.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">No items yet. Add items above or copy from another event.</p>
         ) : (
           <div className="mt-4 space-y-3">
-            {state.menu.items.map((item) => (
+            {currentMenuItems.map((item) => (
               <div
                 key={item.id}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
@@ -970,8 +1260,10 @@ export function MenuPage() {
 export function DrinksPage() {
   const { state, dispatch } = useParty()
   const [extraItem, setExtraItem] = useState('')
+  const [qtyDraft, setQtyDraft] = useState({ name: '', quantity: 1 })
   const customDrinks = state.drinks.customDrinks ?? []
   const drinkOverrides = state.drinks.drinkOverrides ?? {}
+  const quantities = state.drinks.quantities ?? []
 
   const isCustomDrink = (drinkId: string) => customDrinks.some((d) => d.id === drinkId)
   const hasOverride = (drinkId: string) => drinkId in drinkOverrides
@@ -1087,6 +1379,33 @@ export function DrinksPage() {
         hiddenBaseItems: [...hidden, key],
         shoppingListOverrides: { ...state.drinks.shoppingListOverrides, [key]: undefined },
       },
+    })
+  }
+
+  const addDrinkQuantity = () => {
+    if (!qtyDraft.name.trim()) return
+    dispatch({
+      type: 'update_drinks',
+      payload: {
+        quantities: [...quantities, { id: uuid(), name: qtyDraft.name.trim(), quantity: qtyDraft.quantity }],
+      },
+    })
+    setQtyDraft({ name: '', quantity: 1 })
+  }
+
+  const updateDrinkQuantity = (id: string, updates: { name?: string; quantity?: number }) => {
+    dispatch({
+      type: 'update_drinks',
+      payload: {
+        quantities: quantities.map((q) => (q.id === id ? { ...q, ...updates } : q)),
+      },
+    })
+  }
+
+  const removeDrinkQuantity = (id: string) => {
+    dispatch({
+      type: 'update_drinks',
+      payload: { quantities: quantities.filter((q) => q.id !== id) },
     })
   }
 
@@ -1246,6 +1565,97 @@ export function DrinksPage() {
             ),
           )}
         </ul>
+      </Card>
+
+      <Card>
+        <CardTitle>Drink quantities</CardTitle>
+        <p className="mt-2 text-sm text-slate-400">
+          Track drink names and quantities (batches, servings, bottles) for planning.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Input
+            value={qtyDraft.name}
+            onChange={(e) => setQtyDraft({ ...qtyDraft, name: e.target.value })}
+            placeholder="Drink name"
+            className="w-40"
+          />
+          <Input
+            type="number"
+            min={1}
+            value={qtyDraft.quantity}
+            onChange={(e) => setQtyDraft({ ...qtyDraft, quantity: Number(e.target.value) || 1 })}
+            placeholder="Qty"
+            className="w-24"
+          />
+          <Button type="button" onClick={addDrinkQuantity} disabled={!qtyDraft.name.trim()}>
+            Add
+          </Button>
+        </div>
+        {quantities.length > 0 && (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-left text-slate-400">
+                  <th className="py-2 pr-4">Drink</th>
+                  <th className="py-2 pr-4">Quantity</th>
+                  <th className="w-10" />
+                </tr>
+              </thead>
+              <tbody>
+                {quantities.map((q) => (
+                  <tr key={q.id} className="border-b border-white/5">
+                    <td className="py-2 pr-4">
+                      <Input
+                        value={q.name}
+                        onChange={(e) => updateDrinkQuantity(q.id, { name: e.target.value })}
+                        className="border-0 bg-transparent py-1"
+                      />
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={q.quantity}
+                        onChange={(e) => updateDrinkQuantity(q.id, { quantity: Number(e.target.value) || 1 })}
+                        className="w-20 border-0 bg-transparent py-1"
+                      />
+                    </td>
+                    <td>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-400 hover:text-rose-400"
+                        onClick={() => removeDrinkQuantity(q.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle>Party pictures</CardTitle>
+        <p className="mt-2 text-sm text-slate-400">
+          Store and view party photos in the Photo/Video module.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <div className="rounded-xl bg-white/5 p-4 text-center">
+            <ImagePlus className="mx-auto size-8 text-slate-400" />
+            <p className="mt-2 text-sm font-medium text-white">
+              {state.photoVideo.photos.length} photo{state.photoVideo.photos.length !== 1 ? 's' : ''} stored
+            </p>
+            <Link to="/photo-video">
+              <Button variant="outline" size="sm" className="mt-2">
+                Open Photo Gallery
+              </Button>
+            </Link>
+          </div>
+        </div>
       </Card>
     </div>
   )
@@ -1421,6 +1831,30 @@ export function DecorPage() {
 
       <Card>
         <CardTitle>Decor list</CardTitle>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-sm text-slate-400">Track decor by zone with status.</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const lines = state.decor.items.map(
+                (i) => `${i.name} | ${i.zone.replace('_', ' ')} | qty ${i.quantity} | ${i.status}`,
+              )
+              const content = ['Decor List', '================', '', ...lines].join('\n')
+              const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+              const url = URL.createObjectURL(blob)
+              const link = document.createElement('a')
+              link.href = url
+              link.download = 'decor-list.txt'
+              link.click()
+              URL.revokeObjectURL(url)
+            }}
+            disabled={state.decor.items.length === 0}
+          >
+            <Download className="mr-1 size-3" /> Export
+          </Button>
+        </div>
         {state.decor.items.length === 0 ? (
           <p className="mt-4 text-sm text-slate-400">No decor yet.</p>
         ) : (
@@ -1455,29 +1889,9 @@ export function DecorPage() {
 
 export function CleaningPage() {
   const { state, dispatch } = useParty()
-  const [draft, setDraft] = useState({
-    label: '',
-    phase: 'before' as const,
-  })
-
-  const addChecklist = () => {
-    if (!draft.label.trim()) return
-    dispatch({
-      type: 'update_cleaning',
-      payload: {
-        checklists: [
-          ...state.cleaning.checklists,
-          {
-            id: uuid(),
-            label: draft.label.trim(),
-            phase: draft.phase,
-            status: 'not_started',
-          },
-        ],
-      },
-    })
-    setDraft({ label: '', phase: 'before' })
-  }
+  const [extraName, setExtraName] = useState('')
+  const [extraQty, setExtraQty] = useState(1)
+  const bathroomExtras = state.cleaning.bathroomExtras ?? []
 
   const toggleBathroomSupply = (id: string) => {
     dispatch({
@@ -1492,147 +1906,224 @@ export function CleaningPage() {
     })
   }
 
-  const toggleChecklistStatus = (id: string) => {
+  const addBathroomExtra = () => {
+    if (!extraName.trim()) return
     dispatch({
       type: 'update_cleaning',
       payload: {
-        checklists: state.cleaning.checklists.map((task) =>
-          task.id === id
-            ? {
-              ...task,
-              status: (task.status === 'done' ? 'not_started' : 'done') as typeof task.status,
-            }
-            : task,
+        bathroomExtras: [
+          ...bathroomExtras,
+          { id: uuid(), name: extraName.trim(), quantity: extraQty, status: 'not_started' as const },
+        ],
+      },
+    })
+    setExtraName('')
+    setExtraQty(1)
+  }
+
+  const toggleBathroomExtra = (id: string) => {
+    dispatch({
+      type: 'update_cleaning',
+      payload: {
+        bathroomExtras: bathroomExtras.map((item) =>
+          item.id === id
+            ? { ...item, status: item.status === 'done' ? 'not_started' : 'done' }
+            : item,
         ),
       },
+    })
+  }
+
+  const removeBathroomExtra = (id: string) => {
+    dispatch({
+      type: 'update_cleaning',
+      payload: { bathroomExtras: bathroomExtras.filter((i) => i.id !== id) },
     })
   }
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Cleaning & Bathroom</h3>
-      <p className="text-sm text-slate-300">Phase-based checklists and supply tracking.</p>
+      <p className="text-sm text-slate-300">Bathroom essentials checklist. Add more items below if needed.</p>
 
       <Card>
         <CardTitle>Bathroom essentials</CardTitle>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {state.cleaning.bathroomSupplies.map((item) => (
-            <Button
-              key={item.id}
-              type="button"
-              onClick={() => toggleBathroomSupply(item.id)}
-              variant="outline"
-              className={[
-                'flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold',
-                item.status === 'done' ? 'bg-emerald-500/20 text-emerald-200' : '',
-              ].join(' ')}
-            >
-              {item.name}
-              <span className="text-xs uppercase">
-                {item.status === 'done' ? 'ready' : 'needs'}
-              </span>
-            </Button>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardTitle>Phase checklist</CardTitle>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <label className="text-sm text-slate-300">
-            Task
-            <Input
-              value={draft.label}
-              onChange={(event) => setDraft({ ...draft, label: event.target.value })}
-              className="mt-2"
-              placeholder="Stock extra towels"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Phase
-            <Select
-              value={draft.phase}
-              onChange={(event) =>
-                setDraft({ ...draft, phase: event.target.value as typeof draft.phase })
-              }
-              className="mt-2"
-            >
-              <option value="before">Before</option>
-              <option value="during">During</option>
-              <option value="after">After</option>
-            </Select>
-          </label>
-          <div className="flex items-end">
-            <Button type="button" onClick={addChecklist} className="w-full">
-              Add task
-            </Button>
-          </div>
-        </div>
-
-        {state.cleaning.checklists.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No cleaning tasks yet.</p>
-        ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {state.cleaning.checklists.map((task) => (
+        <div className="mt-4 space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            {state.cleaning.bathroomSupplies.map((item) => (
               <Button
-                key={task.id}
+                key={item.id}
                 type="button"
-                onClick={() => toggleChecklistStatus(task.id)}
+                onClick={() => toggleBathroomSupply(item.id)}
                 variant="outline"
                 className={[
-                  'flex items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold',
-                  task.status === 'done' ? 'bg-emerald-500/20 text-emerald-200' : '',
+                  'flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold',
+                  item.status === 'done' ? 'bg-emerald-500/20 text-emerald-200' : '',
                 ].join(' ')}
-                aria-pressed={task.status === 'done'}
-                aria-label={task.status === 'done' ? `Mark ${task.label} as not done` : `Mark ${task.label} as done`}
               >
-                <div>
-                  <p className="text-white">{task.label}</p>
-                  <p className="text-xs uppercase text-slate-400">{task.phase}</p>
-                </div>
+                {item.name}
                 <span className="text-xs uppercase">
-                  {task.status === 'done' ? 'Done' : 'To do'}
+                  {item.status === 'done' ? 'ready' : 'needs'}
                 </span>
               </Button>
             ))}
           </div>
-        )}
+          {bathroomExtras.length > 0 && (
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Additional items</p>
+              <div className="space-y-2">
+                {bathroomExtras.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-2"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={cn(
+                        'flex-1 text-left text-sm',
+                        item.status === 'done' && 'text-emerald-300 line-through',
+                      )}
+                      onClick={() => toggleBathroomExtra(item.id)}
+                    >
+                      {item.name} × {item.quantity}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400 hover:text-rose-400"
+                      onClick={() => removeBathroomExtra(item.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="mt-4 flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 p-4">
+            <label className="text-sm text-slate-300">
+              Item
+              <Input
+                value={extraName}
+                onChange={(e) => setExtraName(e.target.value)}
+                className="mt-1"
+                placeholder="e.g. Paper towels"
+              />
+            </label>
+            <label className="text-sm text-slate-300">
+              Qty
+              <Input
+                type="number"
+                min={1}
+                value={extraQty}
+                onChange={(e) => setExtraQty(Number(e.target.value) || 1)}
+                className="mt-1 w-20"
+              />
+            </label>
+            <Button type="button" size="sm" onClick={addBathroomExtra} disabled={!extraName.trim()}>
+              Add to checklist
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   )
 }
 
+function exportTaskAsIcs(
+  task: { id: string; title: string; offsetHours: number; status: string },
+  baseDate: Date,
+  filename: string,
+) {
+  const start = new Date(baseDate.getTime() + task.offsetHours * 60 * 60 * 1000)
+  const iso = start.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  const content = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `UID:${task.id}`,
+    `DTSTAMP:${iso}`,
+    `DTSTART:${iso}`,
+    `SUMMARY:${task.title}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\n')
+  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 export function TimelinePage() {
   const { state, dispatch } = useParty()
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [draft, setDraft] = useState({
     title: '',
     offsetHours: -24,
   })
 
+  const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
+  const referenceDate = isPartyScope && state.core.date
+    ? parseISO(state.core.date)
+    : state.events.items.find((e) => e.id === selectedEventId)?.date
+      ? parseISO(state.events.items.find((e) => e.id === selectedEventId)!.date)
+      : null
+  const currentTasks = isPartyScope
+    ? state.timeline.tasks
+    : (state.events.items.find((e) => e.id === selectedEventId)?.tasks ?? [])
+
   const addTask = () => {
     if (!draft.title.trim()) return
-    dispatch({
-      type: 'update_timeline',
-      payload: {
-        tasks: [
-          ...state.timeline.tasks,
-          {
-            id: uuid(),
-            title: draft.title.trim(),
-            offsetHours: Number(draft.offsetHours),
-            status: 'not_started',
-          },
-        ],
-      },
-    })
+    const newTask = {
+      id: uuid(),
+      title: draft.title.trim(),
+      offsetHours: Number(draft.offsetHours),
+      status: 'not_started' as const,
+    }
+    if (isPartyScope) {
+      dispatch({
+        type: 'update_timeline',
+        payload: { tasks: [...state.timeline.tasks, newTask] },
+      })
+    } else {
+      const ev = state.events.items.find((e) => e.id === selectedEventId)
+      if (!ev) return
+      const nextTasks = [...(ev.tasks ?? []), newTask]
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((e) =>
+            e.id === selectedEventId ? { ...e, tasks: nextTasks } : e,
+          ),
+        },
+      })
+    }
     setDraft({ title: '', offsetHours: -24 })
   }
 
   const removeTask = (id: string) => {
-    dispatch({
-      type: 'update_timeline',
-      payload: { tasks: state.timeline.tasks.filter((task) => task.id !== id) },
-    })
+    if (isPartyScope) {
+      dispatch({
+        type: 'update_timeline',
+        payload: { tasks: state.timeline.tasks.filter((task) => task.id !== id) },
+      })
+    } else {
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((e) =>
+            e.id === selectedEventId
+              ? { ...e, tasks: (e.tasks ?? []).filter((t) => t.id !== id) }
+              : e,
+          ),
+        },
+      })
+    }
   }
 
   const exportCalendar = () => {
@@ -1678,10 +2169,42 @@ export function TimelinePage() {
   const firstDayOffset = monthStart.getDay()
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+  const allTasksForCalendar = [
+    ...state.timeline.tasks.map((t) => ({ ...t, eventName: state.core.name, date: state.core.date })),
+    ...state.events.items.flatMap((ev) =>
+      (ev.tasks ?? []).map((t) => ({ ...t, eventName: ev.name, date: ev.date })),
+    ),
+  ]
+  const remainingTasks = allTasksForCalendar.filter((t) => t.status !== 'done')
+  const tasksByDay = remainingTasks.reduce<Record<string, typeof remainingTasks>>((acc, t) => {
+    if (!t.date) return acc
+    const d = parseISO(t.date)
+    if (isNaN(d.getTime())) return acc
+    const dayStart = startOfDay(new Date(d.getTime() + t.offsetHours * 60 * 60 * 1000))
+    const key = format(dayStart, 'yyyy-MM-dd')
+    if (!acc[key]) acc[key] = []
+    acc[key].push(t)
+    return acc
+  }, {})
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Timeline</h3>
-      <p className="text-sm text-slate-300">Tasks relative to party start.</p>
+      <p className="text-sm text-slate-300">Tasks relative to party or event start. Each task is exportable.</p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-slate-400">Tasks for:</span>
+        <Select
+          value={selectedEventId ?? '__party__'}
+          onChange={(e) => setSelectedEventId(e.target.value === '__party__' ? null : e.target.value)}
+          className="w-48"
+        >
+          <option value="__party__">Main party</option>
+          {state.events.items.map((ev) => (
+            <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed event'}</option>
+          ))}
+        </Select>
+      </div>
 
       <Card>
         <CardTitle className="flex items-center gap-2">
@@ -1752,20 +2275,33 @@ export function TimelinePage() {
               ))}
               {days.map((day) => {
                 const isPartyDay = Boolean(isValidPartyDate && isSameDay(day, partyDate))
+                const isEventDay = state.events.items.some((e) => {
+                  if (!e.date) return false
+                  const ed = parseISO(e.date)
+                  return !isNaN(ed.getTime()) && isSameDay(day, startOfDay(ed))
+                })
                 const isToday = isSameDay(day, today)
                 const isPast = isBefore(day, today) && !isSameDay(day, today)
+                const dayKey = format(day, 'yyyy-MM-dd')
+                const dayTasks = tasksByDay[dayKey] ?? []
                 return (
                   <div
                     key={day.toISOString()}
                     className={cn(
-                      'flex aspect-square items-center justify-center text-xs font-medium transition',
+                      'flex aspect-square flex-col items-center justify-center gap-0.5 text-xs font-medium transition',
                       !isSameMonth(day, calendarMonth) && 'text-slate-600',
                       isPartyDay && 'rounded-lg bg-emerald-500 text-white ring-2 ring-emerald-400/50',
-                      isToday && !isPartyDay && 'rounded-lg ring-1 ring-slate-500 text-slate-200',
-                      isPast && !isPartyDay && 'text-slate-600 opacity-60',
+                      isEventDay && !isPartyDay && 'rounded-lg bg-emerald-500/30 ring-1 ring-emerald-400/30',
+                      isToday && !isPartyDay && !isEventDay && 'rounded-lg ring-1 ring-slate-500 text-slate-200',
+                      isPast && !isPartyDay && !isEventDay && 'text-slate-600 opacity-60',
                     )}
                   >
-                    {format(day, 'd')}
+                    <span>{format(day, 'd')}</span>
+                    {dayTasks.length > 0 && (
+                      <span className="rounded bg-black/30 px-1 text-[10px]" title={dayTasks.map((t) => t.title).join(', ')}>
+                        {dayTasks.length}
+                      </span>
+                    )}
                   </div>
                 )
               })}
@@ -1819,32 +2355,84 @@ export function TimelinePage() {
       </Card>
 
       <Card>
-        <CardTitle>Timeline tasks</CardTitle>
-        {state.timeline.tasks.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No tasks yet.</p>
+        <CardTitle>Remaining activities (calendar)</CardTitle>
+        <p className="mt-2 text-sm text-slate-400">
+          Tasks not yet done, across all events. Export any task to add to your calendar.
+        </p>
+        {remainingTasks.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">No remaining tasks. Add tasks below or mark completed ones done.</p>
+        ) : (
+          <div className="mt-4 space-y-2">
+            {remainingTasks.map((task) => {
+              const baseDate = task.date ? parseISO(task.date) : null
+              const isValid = baseDate && !isNaN(baseDate.getTime())
+              return (
+                <div
+                  key={`${task.eventName}-${task.id}`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-2 text-sm"
+                >
+                  <div>
+                    <p className="font-semibold text-white">{task.title}</p>
+                    <p className="text-xs text-slate-400">{task.eventName} · {task.offsetHours}h from start</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="px-2 py-1 text-xs"
+                    onClick={() => isValid && exportTaskAsIcs(task, baseDate!, `task-${task.title.replace(/\s+/g, '-')}.ics`)}
+                    disabled={!isValid}
+                  >
+                    <Download className="mr-1 size-3" /> Export
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle>Timeline tasks{!isPartyScope ? ` (${state.events.items.find((e) => e.id === selectedEventId)?.name || 'Event'})` : ''}</CardTitle>
+        {currentTasks.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">No tasks yet. Add tasks above.</p>
         ) : (
           <div className="mt-4 space-y-3">
-            {state.timeline.tasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-semibold text-white">{task.title}</p>
-                  <p className="text-xs uppercase text-slate-400">
-                    {task.offsetHours}h from start
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => removeTask(task.id)}
-                  variant="outline"
-                  className="px-3 py-1 text-xs"
+            {currentTasks.map((task) => {
+              const baseDate = referenceDate && !isNaN(referenceDate.getTime()) ? referenceDate : new Date()
+              return (
+                <div
+                  key={task.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
                 >
-                  Remove
-                </Button>
-              </div>
-            ))}
+                  <div>
+                    <p className="font-semibold text-white">{task.title}</p>
+                    <p className="text-xs uppercase text-slate-400">
+                      {task.offsetHours}h from start
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => exportTaskAsIcs(task, baseDate, `task-${task.title.replace(/\s+/g, '-')}.ics`)}
+                    >
+                      <Download className="mr-1 size-3" /> Export
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => removeTask(task.id)}
+                      variant="outline"
+                      className="px-3 py-1 text-xs"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </Card>
@@ -1944,6 +2532,17 @@ export function MusicPage() {
   )
 }
 
+function GameQRCode({ url }: { url: string }) {
+  const encoded = encodeURIComponent(url)
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encoded}`
+  return (
+    <div className="mt-2 flex flex-col items-center gap-2 rounded-lg bg-white/5 p-3">
+      <img src={qrUrl} alt="QR code for game link" className="size-32 rounded" />
+      <p className="text-xs text-slate-400">Scan to open game link</p>
+    </div>
+  )
+}
+
 export function GamesPage() {
   const { state, dispatch } = useParty()
   const [draft, setDraft] = useState({
@@ -1953,6 +2552,7 @@ export function GamesPage() {
     groupSize: '4-8',
     rules: '',
     supplies: '',
+    link: '',
   })
 
   const addGame = () => {
@@ -1973,6 +2573,7 @@ export function GamesPage() {
               .split(',')
               .map((item) => item.trim())
               .filter(Boolean),
+            link: draft.link.trim() || undefined,
           },
         ],
       },
@@ -1984,6 +2585,7 @@ export function GamesPage() {
       groupSize: '4-8',
       rules: '',
       supplies: '',
+      link: '',
     })
   }
 
@@ -1991,6 +2593,15 @@ export function GamesPage() {
     dispatch({
       type: 'update_games',
       payload: { games: state.games.games.filter((game) => game.id !== id) },
+    })
+  }
+
+  const updateGameLink = (id: string, link: string) => {
+    dispatch({
+      type: 'update_games',
+      payload: {
+        games: state.games.games.map((g) => (g.id === id ? { ...g, link: link.trim() || undefined } : g)),
+      },
     })
   }
 
@@ -2065,6 +2676,16 @@ export function GamesPage() {
               placeholder="Cards, markers"
             />
           </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Game link (rules, instructions, or external game URL)
+            <Input
+              value={draft.link}
+              onChange={(event) => setDraft({ ...draft, link: event.target.value })}
+              className="mt-2"
+              placeholder="https://..."
+            />
+            <p className="mt-1 text-xs text-slate-500">Add a link to generate a QR code for guests to scan.</p>
+          </label>
         </div>
         <Button type="button" onClick={addGame} className="mt-4">
           Add game
@@ -2079,27 +2700,37 @@ export function GamesPage() {
           <div className="mt-4 space-y-3">
             {state.games.games.map((game) => (
               <div key={game.id} className="rounded-xl bg-white/5 px-4 py-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-white">{game.name}</p>
                     <p className="text-xs uppercase text-slate-400">
                       {game.category} · {game.durationMins} mins · {game.groupSize}
                     </p>
+                    {game.supplies.length ? (
+                      <p className="mt-2 text-xs text-slate-400">
+                        Supplies: {game.supplies.join(', ')}
+                      </p>
+                    ) : null}
+                    <label className="mt-2 block">
+                      <span className="text-xs text-slate-500">Game link (for QR code)</span>
+                      <Input
+                        value={game.link ?? ''}
+                        onChange={(e) => updateGameLink(game.id, e.target.value)}
+                        className="mt-1"
+                        placeholder="https://..."
+                      />
+                    </label>
+                    {game.link && <GameQRCode url={game.link} />}
                   </div>
                   <Button
                     type="button"
                     onClick={() => removeGame(game.id)}
                     variant="outline"
-                    className="px-3 py-1 text-xs"
+                    className="shrink-0 px-3 py-1 text-xs"
                   >
                     Remove
                   </Button>
                 </div>
-                {game.supplies.length ? (
-                  <p className="mt-2 text-xs text-slate-400">
-                    Supplies: {game.supplies.join(', ')}
-                  </p>
-                ) : null}
               </div>
             ))}
           </div>

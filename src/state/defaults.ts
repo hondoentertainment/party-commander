@@ -1,6 +1,26 @@
-import type { PartyState, Theme } from './types'
+import type { LeadAssignment, PartyState, Theme } from './types'
 
 const defaultTheme: Theme = 'Classic'
+
+/** Default lead roles for copying to new events */
+export const defaultLeadsTemplate: LeadAssignment[] = [
+  { id: 'budget', function: 'Budget', leadName: '' },
+  { id: 'invites', function: 'Invites', leadName: '' },
+  { id: 'events', function: 'Events', leadName: '' },
+  { id: 'leads', function: 'Leads', leadName: '' },
+  { id: 'food', function: 'Food', leadName: '' },
+  { id: 'drinks', function: 'Drinks', leadName: '' },
+  { id: 'decor', function: 'Decor & Ambience', leadName: '' },
+  { id: 'cleaning', function: 'Cleaning & Bathroom', leadName: '' },
+  { id: 'timeline', function: 'Timeline & Calendar', leadName: '' },
+  { id: 'music', function: 'Music Hub', leadName: '' },
+  { id: 'games', function: 'Game Generator', leadName: '' },
+  { id: 'venue', function: 'Venue & Rooftop', leadName: '' },
+  { id: 'entry', function: 'Entry Mode', leadName: '' },
+  { id: 'live', function: 'Live Party', leadName: '' },
+  { id: 'post_party', function: 'Post-Party Wrap', leadName: '' },
+  { id: 'photo_video', function: 'Photo/Video Shoot', leadName: '' },
+]
 
 export const defaultPartyState: PartyState = {
   core: {
@@ -26,26 +46,7 @@ export const defaultPartyState: PartyState = {
   events: {
     items: [],
   },
-  leads: {
-    items: [
-      { id: 'budget', function: 'Budget', leadName: '' },
-      { id: 'invites', function: 'Invites', leadName: '' },
-      { id: 'events', function: 'Events', leadName: '' },
-      { id: 'leads', function: 'Leads', leadName: '' },
-      { id: 'food', function: 'Food', leadName: '' },
-      { id: 'drinks', function: 'Drinks', leadName: '' },
-      { id: 'decor', function: 'Decor & Ambience', leadName: '' },
-      { id: 'cleaning', function: 'Cleaning & Bathroom', leadName: '' },
-      { id: 'timeline', function: 'Timeline & Calendar', leadName: '' },
-      { id: 'music', function: 'Music Hub', leadName: '' },
-      { id: 'games', function: 'Game Generator', leadName: '' },
-      { id: 'venue', function: 'Venue & Rooftop', leadName: '' },
-      { id: 'entry', function: 'Entry Mode', leadName: '' },
-      { id: 'live', function: 'Live Party', leadName: '' },
-      { id: 'post_party', function: 'Post-Party Wrap', leadName: '' },
-      { id: 'photo_video', function: 'Photo/Video Shoot', leadName: '' },
-    ],
-  },
+  leads: { items: defaultLeadsTemplate },
   menu: {
     items: [],
   },
@@ -53,6 +54,7 @@ export const defaultPartyState: PartyState = {
     suggestions: [],
     shoppingList: [],
     extraItems: [],
+    quantities: [],
     shoppingListOverrides: {},
     hiddenBaseItems: [],
     drinkOverrides: {},
@@ -63,6 +65,7 @@ export const defaultPartyState: PartyState = {
   },
   cleaning: {
     checklists: [],
+    bathroomExtras: [],
     bathroomSupplies: [
       { id: 'tp', name: 'Toilet paper', status: 'not_started' },
       { id: 'soap', name: 'Hand soap', status: 'not_started' },

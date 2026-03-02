@@ -174,7 +174,17 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       let events = merged.events.items
       try {
         const dbEvents = await EventService.listByParty(id)
-        if (dbEvents.length > 0) events = dbEvents
+        if (dbEvents.length > 0) {
+          events = dbEvents.map((dbEv) => {
+            const stateEv = merged.events.items.find((e) => e.id === dbEv.id)
+            return {
+              ...dbEv,
+              tasks: stateEv?.tasks,
+              leads: stateEv?.leads,
+              menuItems: stateEv?.menuItems,
+            }
+          })
+        }
       } catch {
         // Fallback to embedded events from party state
       }
@@ -249,7 +259,17 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
           let events = merged.events.items
           try {
             const dbEvents = await EventService.listByParty(row.id)
-            if (dbEvents.length > 0) events = dbEvents
+            if (dbEvents.length > 0) {
+              events = dbEvents.map((dbEv) => {
+                const stateEv = merged.events.items.find((e) => e.id === dbEv.id)
+                return {
+                  ...dbEv,
+                  tasks: stateEv?.tasks,
+                  leads: stateEv?.leads,
+                  menuItems: stateEv?.menuItems,
+                }
+              })
+            }
           } catch {
             // Fallback to embedded events from party state
           }
