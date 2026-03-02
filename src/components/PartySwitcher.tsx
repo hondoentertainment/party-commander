@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, Plus, Users } from 'lucide-react'
 import { useParty } from '../state/PartyContext'
+import { getHiddenFromHomePartyIds } from '../state/storage'
 import { Button } from './ui/Button'
 import { SharePartyModal } from './SharePartyModal'
 import { cn } from './ui/utils'
@@ -10,6 +11,9 @@ export function PartySwitcher() {
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+
+  const hidden = new Set(getHiddenFromHomePartyIds())
+  const visibleParties = parties.filter((p) => !hidden.has(p.id))
 
   if (!partyProfile || parties.length === 0) return null
 
@@ -58,7 +62,7 @@ export function PartySwitcher() {
             className="absolute right-0 top-full z-50 mt-2 min-w-[220px] rounded-2xl border border-white/10 bg-slate-900/95 py-2 shadow-xl backdrop-blur-xl"
           >
             <div className="max-h-64 overflow-y-auto">
-              {parties.map((p) => {
+              {visibleParties.map((p) => {
                 const isSharedWithMe = partyProfile && p.party_profile_id !== partyProfile.id
                 return (
                   <button

@@ -37,3 +37,27 @@ export function setLastPartyId(partyId: string | null) {
   if (partyId) localStorage.setItem(LAST_PARTY_KEY, partyId)
   else localStorage.removeItem(LAST_PARTY_KEY)
 }
+
+const HIDDEN_FROM_HOME_KEY = 'party-command-center-hidden-from-home'
+
+export function getHiddenFromHomePartyIds(): string[] {
+  try {
+    const raw = localStorage.getItem(HIDDEN_FROM_HOME_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+export function addPartyToHiddenFromHome(partyId: string): void {
+  const ids = new Set(getHiddenFromHomePartyIds())
+  ids.add(partyId)
+  localStorage.setItem(HIDDEN_FROM_HOME_KEY, JSON.stringify([...ids]))
+}
+
+export function removePartyFromHiddenFromHome(partyId: string): void {
+  const ids = getHiddenFromHomePartyIds().filter((id) => id !== partyId)
+  localStorage.setItem(HIDDEN_FROM_HOME_KEY, JSON.stringify(ids))
+}

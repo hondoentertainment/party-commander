@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   compareAsc,
   differenceInHours,
@@ -8,16 +8,18 @@ import {
   parseISO,
 } from 'date-fns'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin, User } from 'lucide-react'
+import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin, User, MoreVertical } from 'lucide-react'
 import { SectionHeader } from '../components/SectionHeader'
 import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
+import { addPartyToHiddenFromHome, getHiddenFromHomePartyIds } from '../state/storage'
 
 export function Dashboard() {
-  const { state, switchParty } = useParty()
+  const { state, switchParty, currentPartyId, parties } = useParty()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [menuOpen, setMenuOpen] = useState(false)
   const partyIdFromUrl = searchParams.get('party')
 
   useEffect(() => {
@@ -121,8 +123,9 @@ export function Dashboard() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-[2rem] border border-white/5 bg-black/40 p-6 backdrop-blur-xl">
+          <div className="relative flex gap-4">
+            <div className="flex-1 space-y-4">
+              <div className="rounded-[2rem] border border-white/5 bg-black/40 p-6 backdrop-blur-xl">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Readiness</span>
                 <span className="text-lg font-bold text-emerald-400">{readinessPercent}%</span>
@@ -159,6 +162,47 @@ export function Dashboard() {
                 </p>
               </div>
             </div>
+            </div>
+            {currentPartyId && parties.length > 1 && (
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-black/40 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                  aria-label="Party options"
+                >
+                  <MoreVertical className="size-5" />
+                </button>
+                {menuOpen && (
+                  <>
+                    <div aria-hidden="true" className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-xl border border-white/10 bg-slate-900/95 py-2 shadow-xl backdrop-blur-xl"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          if (currentPartyId) {
+                            addPartyToHiddenFromHome(currentPartyId)
+                            const hidden = new Set(getHiddenFromHomePartyIds())
+                            const next = parties.find((p) => !hidden.has(p.id))
+                            if (next) switchParty(next.id).then(() => setMenuOpen(false))
+                            else setMenuOpen(false)
+                          }
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
+                      >
+                        Remove from Home
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>

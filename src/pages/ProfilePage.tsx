@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { parseISO, format, isPast } from 'date-fns'
 import { useParty } from '../state/PartyContext'
 import type { PartyRow } from '../services/parties'
+import { getHiddenFromHomePartyIds, removePartyFromHiddenFromHome } from '../state/storage'
 import { ProfileService, type Profile } from '../services/profile'
 import { AuthService } from '../services/auth'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { User, Loader2, LogOut, Calendar, ChevronRight, Users, PartyPopper } from 'lucide-react'
+import { User, Loader2, LogOut, Calendar, ChevronRight, Users, PartyPopper, Home } from 'lucide-react'
 
 function getLeadingFunctions(p: PartyRow, displayName: string): string[] {
     const name = displayName?.trim().toLowerCase()
@@ -34,6 +35,8 @@ function PartyListItem({
     navigate,
     isPast,
     displayName,
+    isHiddenFromHome,
+    onAddToHome,
 }: {
     p: PartyRow
     partyProfile: { id: string }
@@ -42,6 +45,8 @@ function PartyListItem({
     navigate: (path: string) => void
     isPast: boolean
     displayName: string
+    isHiddenFromHome: boolean
+    onAddToHome: (partyId: string) => void
 }) {
     const core = (p.state as { core?: { date?: string; name?: string } })?.core
     const dateStr = core?.date
@@ -97,7 +102,18 @@ function PartyListItem({
                 >
                     {isPast ? 'Past' : 'Active'}
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-slate-500" />
+                {isHiddenFromHome ? (
+                    <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToHome(p.id) }}
+                        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
+                    >
+                        <Home className="size-3.5" />
+                        Add to Home
+                    </button>
+                ) : (
+                    <ChevronRight className="size-4 shrink-0 text-slate-500" />
+                )}
             </Link>
         </li>
     )
@@ -110,6 +126,8 @@ function ActivePartiesList({
     switchParty,
     navigate,
     displayName,
+    hiddenFromHomeIds,
+    onAddToHome,
 }: {
     parties: PartyRow[]
     partyProfile: { id: string }
@@ -117,6 +135,8 @@ function ActivePartiesList({
     switchParty: (id: string) => Promise<void>
     navigate: (path: string) => void
     displayName: string
+    hiddenFromHomeIds: ReadonlySet<string>
+    onAddToHome: (partyId: string) => void
 }) {
     const { active, past } = useMemo(() => {
         const a: PartyRow[] = []
@@ -146,6 +166,8 @@ function ActivePartiesList({
                                 navigate={navigate}
                                 isPast={false}
                                 displayName={displayName}
+                                isHiddenFromHome={hiddenFromHomeIds.has(p.id)}
+                                onAddToHome={onAddToHome}
                             />
                         ))}
                     </ul>
@@ -167,6 +189,8 @@ function ActivePartiesList({
                                 navigate={navigate}
                                 isPast
                                 displayName={displayName}
+                                isHiddenFromHome={hiddenFromHomeIds.has(p.id)}
+                                onAddToHome={onAddToHome}
                             />
                         ))}
                     </ul>
@@ -180,6 +204,13 @@ export function ProfilePage() {
     const navigate = useNavigate()
     const { state, parties, partyProfile, currentPartyId, switchParty } = useParty()
     const [profile, setProfile] = useState<Profile | null>(null)
+    const [, setHiddenRefresh] = useState(0)
+    const hiddenFromHomeIds = new Set(getHiddenFromHomePartyIds())
+
+    const handleAddToHome = (partyId: string) => {
+        removePartyFromHiddenFromHome(partyId)
+        setHiddenRefresh((k) => k + 1) // Force re-render to sync with storage
+    }
     const [displayName, setDisplayName] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -327,6 +358,8 @@ export function ProfilePage() {
                                 switchParty={switchParty}
                                 navigate={navigate}
                                 displayName={profile?.display_name ?? user.user_metadata?.full_name ?? ''}
+                                hiddenFromHomeIds={hiddenFromHomeIds}
+                                onAddToHome={handleAddToHome}
                             />
                             <Link
                                 to="/"
