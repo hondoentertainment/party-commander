@@ -19,7 +19,6 @@ import { cn } from '../components/ui/utils'
 import type { Theme } from '../state/types'
 import { SwarmConsole } from '../components/SwarmConsole'
 import { AIAssistant } from '../components/AIAssistant'
-import { OnboardingWizard } from '../components/OnboardingWizard'
 import { ShieldCheck } from 'lucide-react'
 
 const themes: Theme[] = [
@@ -111,7 +110,6 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8 pb-32">
-      <OnboardingWizard />
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-slate-950/50 p-8 md:p-12">
         <div className="glow-orb" />
