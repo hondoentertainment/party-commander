@@ -12,7 +12,6 @@ import {
   MapPin,
   Music2,
   Settings,
-  User,
   UserCog,
   Users,
   UtensilsCrossed,
@@ -39,7 +38,6 @@ export type ModuleId =
   | 'live'
   | 'photo_video'
   | 'post_party'
-  | 'profile'
   | 'admin'
 
 export interface ModuleConfig {
@@ -68,7 +66,6 @@ export const MODULES: ModuleConfig[] = [
   { id: 'live', to: '/live', label: 'Live', icon: Zap, canDisable: true },
   { id: 'photo_video', to: '/photo-video', label: 'Photo/Video', icon: Camera, canDisable: true },
   { id: 'post_party', to: '/post-party', label: 'Post-Party', icon: Archive, canDisable: true },
-  { id: 'profile', to: '/profile', label: 'Profile', icon: User, canDisable: false },
   { id: 'admin', to: '/admin', label: 'Admin', icon: Settings, canDisable: false },
 ]
 
