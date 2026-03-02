@@ -12,23 +12,8 @@ import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calend
 import { SectionHeader } from '../components/SectionHeader'
 import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
-import { Input } from '../components/ui/Input'
-import { Select } from '../components/ui/Select'
 import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
-import type { Theme } from '../state/types'
-import { ShieldCheck } from 'lucide-react'
-
-const themes: Theme[] = [
-  'Classic',
-  'Rooftop',
-  'Tropical',
-  'Disco',
-  'Game Night',
-  'Cozy',
-  'Minimal',
-  'Custom',
-]
 
 export function Dashboard() {
   const { state, dispatch, switchParty } = useParty()
@@ -115,11 +100,6 @@ export function Dashboard() {
 
         <div className="relative z-10 grid gap-12 lg:grid-cols-[2fr_1.2fr]">
           <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-              <ShieldCheck className="size-3" />
-              Intelligence Mode Active
-            </div>
-
             <div className="space-y-2">
               <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-6xl">
                 {state.core.name || 'Party Command'}
@@ -278,60 +258,6 @@ export function Dashboard() {
           </Card>
         </div>
 
-        {/* Right Column: Settings & Quick Config */}
-        <div className="space-y-6">
-          <SectionHeader
-            title="Registry"
-            subtitle="Core event parameters."
-          />
-
-          <Card>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Event Name</label>
-                <Input
-                  value={state.core.name}
-                  onChange={(event) => dispatch({ type: 'update_core', payload: { name: event.target.value } })}
-                  className="rounded-xl border-white/5 bg-black/20 focus:bg-black/40"
-                  placeholder="e.g. My Awesome Party"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Date & Time</label>
-                <Input
-                  type="datetime-local"
-                  value={state.core.date}
-                  onChange={(event) => dispatch({ type: 'update_core', payload: { date: event.target.value } })}
-                  className="rounded-xl border-white/5 bg-black/20 focus:bg-black/40"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Party Theme</label>
-                <Select
-                  value={state.core.theme}
-                  onChange={(event) => dispatch({ type: 'update_core', payload: { theme: event.target.value as Theme } })}
-                  className="rounded-xl border-white/5 bg-black/20"
-                >
-                  {themes.map((theme) => (
-                    <option key={theme} value={theme}>{theme}</option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Location</label>
-                <Input
-                  value={state.core.location}
-                  onChange={(event) => dispatch({ type: 'update_core', payload: { location: event.target.value } })}
-                  className="rounded-xl border-white/5 bg-black/20 focus:bg-black/40"
-                  placeholder="e.g. My Place"
-                />
-              </div>
-            </div>
-          </Card>
-        </div>
       </div>
     </div>
   )
