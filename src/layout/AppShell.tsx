@@ -18,15 +18,17 @@ export function AppShell() {
       >
         Skip to main content
       </a>
-      <div className="hidden min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl md:fixed md:inset-y-0 md:flex md:w-72 md:flex-col" aria-label="Sidebar">
-        <div className="px-6 py-6">
+      <div className="hidden h-screen min-h-0 border-r border-white/10 bg-black/40 backdrop-blur-xl md:fixed md:inset-y-0 md:flex md:w-72 md:flex-col md:overflow-hidden" aria-label="Sidebar">
+        <div className="shrink-0 px-6 py-6">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Party Command Center</p>
           <h1 className="text-2xl font-semibold text-white">Host Command</h1>
           <p className="mt-2 text-sm text-slate-300">
             Design the vibe. Orchestrate the flow.
           </p>
         </div>
-        <Navigation layout="sidebar" />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <Navigation layout="sidebar" />
+        </div>
       </div>
 
       <div className="md:pl-72">

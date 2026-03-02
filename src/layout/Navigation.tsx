@@ -15,7 +15,7 @@ export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
       aria-label="Main navigation"
       className={
         layout === 'sidebar'
-          ? 'flex h-full flex-col gap-1 px-3 py-4'
+          ? 'flex flex-col gap-1 px-3 py-4'
           : 'flex items-center justify-between gap-2 px-3 py-2'
       }
     >
