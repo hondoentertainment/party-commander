@@ -9,6 +9,7 @@ import {
   Gamepad2,
   GlassWater,
   Home,
+  Lightbulb,
   MapPin,
   Music2,
   Settings,
@@ -22,6 +23,7 @@ import type { LucideIcon } from 'lucide-react'
 
 export type ModuleId =
   | 'home'
+  | 'plan'
   | 'budget'
   | 'invites'
   | 'events'
@@ -50,6 +52,7 @@ export interface ModuleConfig {
 
 export const MODULES: ModuleConfig[] = [
   { id: 'home', to: '/', label: 'Home', icon: Home, canDisable: false },
+  { id: 'plan', to: '/plan', label: 'Plan', icon: Lightbulb, canDisable: true },
   { id: 'timeline', to: '/timeline', label: 'Timeline', icon: CalendarClock, canDisable: true },
   { id: 'budget', to: '/budget', label: 'Budget', icon: DollarSign, canDisable: true },
   { id: 'invites', to: '/invites', label: 'Invites', icon: Users, canDisable: true },

@@ -23,6 +23,7 @@ import {
   MenuPage,
   MusicPage,
   PhotoVideoPage,
+  PlanPage,
   PostPartyPage,
   TimelinePage,
   VenuePage,
@@ -38,6 +39,7 @@ function App() {
           <Route element={<ModuleGuard />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
+            <Route path="/plan" element={<PlanPage />} />
             <Route path="/budget" element={<BudgetPage />} />
             <Route path="/invites" element={<InvitesPage />} />
             <Route path="/events" element={<EventsPage />} />

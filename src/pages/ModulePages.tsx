@@ -38,7 +38,7 @@ import {
 import { getShoppingListItems } from '../state/engines'
 import { generateBudgetOptimization } from '../services/ai'
 import type { DrinkSuggestion, GalleryPhoto, ShoppingListBaseKey } from '../state/types'
-import type { BudgetLineItem } from '../state/types'
+import type { BudgetLineItem, Theme } from '../state/types'
 
 /** Parse dollar amount from string like "$24" or "24.50" */
 function parseCost(value: string): number {
@@ -314,6 +314,74 @@ export function BudgetPage() {
               </div>
             ))}
           </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+const PARTY_CONCEPTS: Theme[] = [
+  'Classic',
+  'Rooftop',
+  'Tropical',
+  'Disco',
+  'Game Night',
+  'Cozy',
+  'Minimal',
+  'Custom',
+]
+
+export function PlanPage() {
+  const { state, dispatch } = useParty()
+
+  const setTheme = (theme: Theme) => {
+    dispatch({
+      type: 'update_core',
+      payload: { theme, customTheme: theme === 'Custom' ? state.core.customTheme : '' },
+    })
+  }
+
+  const setCustomTheme = (customTheme: string) => {
+    dispatch({ type: 'update_core', payload: { customTheme } })
+  }
+
+  return (
+    <div className="space-y-6 pb-20 md:pb-0">
+      <h3 className="text-2xl font-semibold text-white">Plan</h3>
+      <p className="text-sm text-slate-300">
+        Pick a party concept for your event. This sets the vibe for drinks and decor.
+      </p>
+
+      <Card>
+        <CardTitle>Party concepts</CardTitle>
+        <ul className="mt-4 space-y-2">
+          {PARTY_CONCEPTS.map((concept) => (
+            <li key={concept}>
+              <button
+                type="button"
+                onClick={() => setTheme(concept)}
+                className={cn(
+                  'w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition',
+                  state.core.theme === concept
+                    ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
+                    : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                )}
+              >
+                {concept}
+              </button>
+            </li>
+          ))}
+        </ul>
+        {state.core.theme === 'Custom' && (
+          <label className="mt-4 block">
+            <span className="text-xs font-medium text-slate-400">Custom concept name</span>
+            <Input
+              value={state.core.customTheme}
+              onChange={(e) => setCustomTheme(e.target.value)}
+              className="mt-2"
+              placeholder="e.g. Art Deco Speakeasy"
+            />
+          </label>
         )}
       </Card>
     </div>
@@ -617,8 +685,35 @@ export function EventsPage() {
         </Button>
       </div>
 
-      <Card>
+        <Card>
         <CardTitle>Add event</CardTitle>
+        {state.events.items.length === 0 && (state.core.name || state.core.date || state.core.location) && (
+          <div className="mt-2 mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                dispatch({
+                  type: 'update_events',
+                  payload: {
+                    items: [{
+                      id: uuid(),
+                      name: state.core.name || 'My Party',
+                      date: state.core.date,
+                      location: state.core.location,
+                      link: '',
+                      notes: '',
+                    }],
+                  },
+                })
+              }}
+            >
+              Initialize from party details
+            </Button>
+            <p className="mt-2 text-xs text-slate-500">One event, same as your party</p>
+          </div>
+        )}
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="text-sm text-slate-300">
             Event name
@@ -2035,7 +2130,6 @@ export function CleaningPage() {
               Add to checklist
             </Button>
           </div>
-        </div>
       </Card>
     </div>
   )
@@ -2161,16 +2255,17 @@ export function TimelinePage() {
     URL.revokeObjectURL(url)
   }
 
-  const partyDate = state.core.date ? parseISO(state.core.date) : null
-  const isValidPartyDate = partyDate && !isNaN(partyDate.getTime())
+  /** Use event-scoped date when an event is selected (multi-event support) */
+  const referencePartyDate = referenceDate ?? (state.core.date ? parseISO(state.core.date) : null)
+  const isValidPartyDate = referencePartyDate && !isNaN(referencePartyDate.getTime())
   const today = startOfDay(new Date())
   const daysToEvent = isValidPartyDate
-    ? differenceInDays(startOfDay(partyDate), today)
+    ? differenceInDays(startOfDay(referencePartyDate), today)
     : null
   const isEventUpcoming = daysToEvent !== null && daysToEvent >= 0
 
   const [calendarMonth, setCalendarMonth] = useState(() =>
-    isValidPartyDate ? startOfMonth(partyDate) : startOfMonth(new Date()),
+    isValidPartyDate ? startOfMonth(referencePartyDate) : startOfMonth(new Date()),
   )
   const monthStart = startOfMonth(calendarMonth)
   const monthEnd = endOfMonth(calendarMonth)
@@ -2240,7 +2335,7 @@ export function TimelinePage() {
                 <span className="text-lg font-semibold text-slate-400">Event passed</span>
               )}
               <span className="mt-2 text-xs text-slate-500">
-                {format(partyDate, 'EEEE, MMM d, yyyy')}
+                {format(referencePartyDate, 'EEEE, MMM d, yyyy')}
               </span>
             </div>
           )}
@@ -2283,7 +2378,7 @@ export function TimelinePage() {
                 <div key={`pad-${i}`} className="aspect-square" />
               ))}
               {days.map((day) => {
-                const isPartyDay = Boolean(isValidPartyDate && isSameDay(day, partyDate))
+                const isPartyDay = Boolean(isValidPartyDate && isSameDay(day, referencePartyDate))
                 const isEventDay = state.events.items.some((e) => {
                   if (!e.date) return false
                   const ed = parseISO(e.date)

@@ -16,7 +16,7 @@ import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
 
 export function Dashboard() {
-  const { state, dispatch, switchParty } = useParty()
+  const { state, switchParty } = useParty()
   const [searchParams, setSearchParams] = useSearchParams()
   const partyIdFromUrl = searchParams.get('party')
 
@@ -83,7 +83,10 @@ export function Dashboard() {
     .map((event) => ({ ...event, parsed: parseISO(event.date) }))
     .filter((event) => !isNaN(event.parsed.getTime()) && isAfter(event.parsed, now))
     .sort((a, b) => compareAsc(a.parsed, b.parsed))
-  const nextEvent = upcomingEvents[0]
+  /** For single-event mode: when no events exist, treat party core as the active event */
+  const nextEvent = upcomingEvents[0] ?? (state.events.items.length === 0 && (state.core.name || state.core.date || state.core.location)
+    ? { name: state.core.name || 'My Party', date: state.core.date, location: state.core.location, link: '', leadName: undefined as string | undefined }
+    : null)
   const archivedEvents =
     state.events.items.filter((event) => {
       if (!event.date) return false
