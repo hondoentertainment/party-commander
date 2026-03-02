@@ -12,6 +12,7 @@ import { v4 as uuid } from 'uuid'
 import { supabase } from '../services/auth'
 import { PartyProfileService, type PartyProfile } from '../services/partyProfile'
 import { PartyService, type PartyRow } from '../services/parties'
+import { EventService } from '../services/events'
 import { applyEngines } from './engines'
 import { defaultPartyState } from './defaults'
 import { getLastPartyId, loadState, saveState, setLastPartyId } from './storage'
@@ -170,9 +171,16 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       if (!row) return
       const stored = row.state as Partial<PartyState>
       const merged = mergeStoredWithDefaults(stored)
+      let events = merged.events.items
+      try {
+        const dbEvents = await EventService.listByParty(id)
+        if (dbEvents.length > 0) events = dbEvents
+      } catch {
+        // Fallback to embedded events from party state
+      }
       dispatch({
         type: 'set_state',
-        payload: { ...merged, auth: state.auth },
+        payload: { ...merged, events: { items: events }, auth: state.auth },
       })
       setCurrentPartyId(id)
       setLastPartyId(id)
@@ -238,9 +246,16 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
           if (cancelled || !row) return
           const stored = row.state as Partial<PartyState>
           const merged = mergeStoredWithDefaults(stored)
+          let events = merged.events.items
+          try {
+            const dbEvents = await EventService.listByParty(row.id)
+            if (dbEvents.length > 0) events = dbEvents
+          } catch {
+            // Fallback to embedded events from party state
+          }
           dispatch({
             type: 'set_state',
-            payload: { ...merged, auth },
+            payload: { ...merged, events: { items: events }, auth },
           })
           setCurrentPartyId(row.id)
           setLastPartyId(row.id)
@@ -278,6 +293,7 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
       PartyService.update(currentPartyId, state).catch(console.error)
+      EventService.sync(currentPartyId, state.events.items).catch(console.error)
       saveTimeoutRef.current = null
     }, 1000)
 
