@@ -7,6 +7,7 @@ import { AuthCallback } from './pages/AuthCallback'
 import { AdminPage } from './pages/AdminPage'
 import { InvitePage } from './pages/InvitePage'
 import { Dashboard } from './pages/Dashboard'
+import { PlanPage } from './pages/PlanPage'
 import { ProfilePage } from './pages/ProfilePage'
 import {
   BudgetPage,
@@ -36,6 +37,7 @@ function App() {
         <Route element={<AuthGate />}>
           <Route element={<ModuleGuard />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/plan" element={<PlanPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/budget" element={<BudgetPage />} />
             <Route path="/invites" element={<InvitesPage />} />

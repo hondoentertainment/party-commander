@@ -17,8 +17,6 @@ import { Select } from '../components/ui/Select'
 import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
 import type { Theme } from '../state/types'
-import { SwarmConsole } from '../components/SwarmConsole'
-import { AIAssistant } from '../components/AIAssistant'
 import { ShieldCheck } from 'lucide-react'
 
 const themes: Theme[] = [
@@ -179,18 +177,6 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Intelligence War Room */}
-      <section className="space-y-6">
-        <SectionHeader
-          title="Swarm Intelligence"
-          subtitle="Autonomous agents collaborating on zero-friction event logic."
-        />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SwarmConsole />
-          <AIAssistant />
         </div>
       </section>
 

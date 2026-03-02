@@ -1639,9 +1639,9 @@ export function DrinksPage() {
       </Card>
 
       <Card>
-        <CardTitle>Party pictures</CardTitle>
+        <CardTitle>Drink pictures</CardTitle>
         <p className="mt-2 text-sm text-slate-400">
-          Store and view party photos in the Photo/Video module.
+          Store and view drink photos in the Photo/Video module.
         </p>
         <div className="mt-4 flex flex-wrap gap-4">
           <div className="rounded-xl bg-white/5 p-4 text-center">
