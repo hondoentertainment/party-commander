@@ -59,8 +59,8 @@ export const AuthService = {
         // Map URL types to verifyOtp types: signup/magiclink -> email, recovery -> recovery
         const otpType =
             type === 'recovery' ? 'recovery' as const
-            : (type === 'signup' || type === 'magiclink') ? 'email' as const
-            : (type === 'invite' ? 'invite' as const : 'email' as const)
+                : (type === 'signup' || type === 'magiclink') ? 'email' as const
+                    : (type === 'invite' ? 'invite' as const : 'email' as const)
         const { error } = await supabase.auth.verifyOtp({
             token_hash,
             type: otpType,
@@ -77,4 +77,16 @@ export const AuthService = {
             callback(session?.user ?? null)
         })
     },
+
+    async resetPasswordForEmail(email: string) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        })
+        return { error }
+    },
+
+    async updateUser(attributes: { password?: string }) {
+        const { error } = await supabase.auth.updateUser(attributes)
+        return { error }
+    }
 }

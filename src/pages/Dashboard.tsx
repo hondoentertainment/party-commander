@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { compareAsc, isAfter, parseISO } from 'date-fns'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useParams } from 'react-router-dom'
 import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin, User } from 'lucide-react'
 import { SectionHeader } from '../components/SectionHeader'
 import { Button } from '../components/ui/Button'
@@ -9,6 +9,7 @@ import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
 export function Dashboard() {
   const { state, switchParty } = useParty()
+  const { eventId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const partyIdFromUrl = searchParams.get('party')
 
@@ -18,7 +19,7 @@ export function Dashboard() {
       const next = new URLSearchParams(searchParams)
       next.delete('party')
       setSearchParams(next, { replace: true })
-    }).catch(() => {})
+    }).catch(() => { })
   }, [partyIdFromUrl, switchParty])
 
   const readiness = [
@@ -139,18 +140,18 @@ export function Dashboard() {
                 <LayoutDashboard className="size-5 text-emerald-400" />
                 Critical Path
               </CardTitle>
-              <Link to="/timeline" className="text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors">
+              <Link to={`/event/${eventId}/timeline`} className="text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors">
                 View full timeline
               </Link>
             </div>
             <div className="space-y-3">
               {nextActions.length === 0 ? (
-                <Link to="/timeline" className="flex items-center justify-center rounded-2xl border-2 border-dashed border-white/5 py-12 text-sm font-medium text-slate-500 hover:border-emerald-500/20 hover:text-slate-400 transition-all">
+                <Link to={`/event/${eventId}/timeline`} className="flex items-center justify-center rounded-2xl border-2 border-dashed border-white/5 py-12 text-sm font-medium text-slate-500 hover:border-emerald-500/20 hover:text-slate-400 transition-all">
                   Initialize Timeline Protocol
                 </Link>
               ) : (
                 nextActions.map((task) => (
-                  <Link key={task.id} to="/timeline" className="group flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
+                  <Link key={task.id} to={`/event/${eventId}/timeline`} className="group flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
                     <div className="flex items-center gap-4">
                       <div className="flex size-10 items-center justify-center rounded-full bg-slate-900 group-hover:bg-emerald-500/20 transition-colors">
                         <Sparkles className="size-4 text-emerald-500" />

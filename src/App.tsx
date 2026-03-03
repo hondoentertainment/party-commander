@@ -8,7 +8,9 @@ import { AuthCallback } from './pages/AuthCallback'
 import { AdminPage } from './pages/AdminPage'
 import { InvitePage } from './pages/InvitePage'
 import { Dashboard } from './pages/Dashboard'
+import { GlobalDashboard } from './pages/GlobalDashboard'
 import { ProfilePage } from './pages/ProfilePage'
+import { EventScopeGuard } from './components/EventScopeGuard'
 import {
   BudgetPage,
   CleaningPage,
@@ -37,27 +39,35 @@ function App() {
       <Route element={<AppShell />}>
         <Route element={<AuthGate />}>
           <Route element={<ModuleGuard />}>
-            <Route path="/" element={<Dashboard />} />
+            {/* Global Routes */}
+            <Route path="/" element={<GlobalDashboard />} />
             <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
-            <Route path="/plan" element={<PlanPage />} />
-            <Route path="/budget" element={<BudgetPage />} />
-            <Route path="/invites" element={<InvitesPage />} />
-            <Route path="/events" element={<EventsPage />} />
-            <Route path="/leads" element={<LeadsPage />} />
-            <Route path="/food" element={<MenuPage />} />
-            <Route path="/menu" element={<Navigate to="/food" replace />} />
-            <Route path="/drinks" element={<DrinksPage />} />
-            <Route path="/decor" element={<DecorPage />} />
-            <Route path="/cleaning" element={<CleaningPage />} />
-            <Route path="/timeline" element={<TimelinePage />} />
-            <Route path="/music" element={<MusicPage />} />
-            <Route path="/games" element={<GamesPage />} />
-            <Route path="/venue" element={<VenuePage />} />
-            <Route path="/entry" element={<EntryPage />} />
-            <Route path="/live" element={<LivePage />} />
-            <Route path="/photo-video" element={<PhotoVideoPage />} />
-            <Route path="/post-party" element={<PostPartyPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/events" element={<EventsPage />} />
+
+            {/* Event Scoped Routes */}
+            <Route path="/event/:eventId" element={<EventScopeGuard />}>
+              <Route index element={<Dashboard />} />
+              <Route path="plan" element={<PlanPage />} />
+              <Route path="budget" element={<BudgetPage />} />
+              <Route path="invites" element={<InvitesPage />} />
+              <Route path="leads" element={<LeadsPage />} />
+              <Route path="food" element={<MenuPage />} />
+              <Route path="menu" element={<Navigate to="food" replace />} />
+              <Route path="drinks" element={<DrinksPage />} />
+              <Route path="decor" element={<DecorPage />} />
+              <Route path="cleaning" element={<CleaningPage />} />
+              <Route path="timeline" element={<TimelinePage />} />
+              <Route path="music" element={<MusicPage />} />
+              <Route path="games" element={<GamesPage />} />
+              <Route path="venue" element={<VenuePage />} />
+              <Route path="entry" element={<EntryPage />} />
+              <Route path="live" element={<LivePage />} />
+              <Route path="photo-video" element={<PhotoVideoPage />} />
+              <Route path="post-party" element={<PostPartyPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

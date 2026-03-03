@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, Plus, Users } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useParty } from '../state/PartyContext'
 import { getHiddenFromHomePartyIds } from '../state/storage'
 import { Button } from './ui/Button'
@@ -10,7 +11,8 @@ const FOCUSABLE =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
 export function PartySwitcher() {
-  const { partyProfile, parties, currentPartyId, switchParty, createParty, state } = useParty()
+  const { partyProfile, parties, currentPartyId, createParty, state } = useParty()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -26,14 +28,15 @@ export function PartySwitcher() {
 
   const handleSwitch = async (id: string) => {
     if (id === currentPartyId) return
-    await switchParty(id)
+    navigate(`/event/${id}`)
     setOpen(false)
   }
 
   const handleCreate = async () => {
     setCreating(true)
     try {
-      await createParty(false)
+      const id = await createParty(false)
+      navigate(`/event/${id}`)
       setOpen(false)
     } finally {
       setCreating(false)
