@@ -5,6 +5,7 @@ import { cn } from '../components/ui/utils'
 import { v4 as uuid } from 'uuid'
 import { Button } from '../components/ui/Button'
 import { Card, CardTitle } from '../components/ui/Card'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Textarea } from '../components/ui/Textarea'
@@ -51,6 +52,7 @@ function sumDecorCosts(decorItems: { cost: string }[]): number {
 
 export function BudgetPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; label: string } | null>(null)
   const [draft, setDraft] = useState({
     label: '',
     category: 'decor' as BudgetLineItem['category'],
@@ -91,6 +93,10 @@ export function BudgetPage() {
         lineItems: state.budget.lineItems.filter((item) => item.id !== id),
       },
     })
+  }
+  const doRemoveLineItem = (id: string) => {
+    removeLineItem(id)
+    setConfirmingRemove(null)
   }
 
   const updateLineItem = (
@@ -255,7 +261,7 @@ export function BudgetPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => removeLineItem(item.id)}
+                  onClick={() => setConfirmingRemove({ id: item.id, label: item.label })}
                   variant="outline"
                   className="px-3 py-1 text-xs"
                 >
@@ -266,6 +272,17 @@ export function BudgetPage() {
           </div>
         )}
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) doRemoveLineItem(confirmingRemove.id) }}
+        title="Remove line item"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.label}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
@@ -524,6 +541,7 @@ const DEFAULT_LEADS = [
 
 export function EventsPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
   const [copiedEventId, setCopiedEventId] = useState<string | null>(null)
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [draft, setDraft] = useState({
@@ -816,7 +834,11 @@ export function EventsPage() {
                     >
                       {copiedEventId === event.id ? 'Copied' : <> <Copy className="mr-1.5 size-3.5" aria-hidden />Copy event ID</>}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => removeEvent(event.id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmingRemove({ id: event.id, name: event.name || 'this event' })}
+                    >
                       Remove
                     </Button>
                   </div>
@@ -826,6 +848,19 @@ export function EventsPage() {
           </div>
         )}
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => {
+          if (confirmingRemove) removeEvent(confirmingRemove.id)
+        }}
+        title="Remove event"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.name}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
@@ -891,8 +926,8 @@ export function LeadsPage() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-2xl font-semibold text-white">Leads</h3>
-      <p className="text-sm text-slate-300">Assign a lead to each function. Leads are per event.</p>
+      <h3 className="text-2xl font-semibold text-white">Team Roles</h3>
+      <p className="text-sm text-slate-300">Assign roles to team members. Leads are per event.</p>
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-slate-400">Scope:</span>
@@ -953,6 +988,7 @@ export function LeadsPage() {
 
 export function MenuPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [draft, setDraft] = useState({
     name: '',
@@ -1287,7 +1323,7 @@ export function MenuPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => setConfirmingRemove({ id: item.id, name: item.name })}
                   variant="outline"
                   className="px-3 py-1 text-xs"
                 >
@@ -1298,12 +1334,30 @@ export function MenuPage() {
           </div>
         )}
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) removeItem(confirmingRemove.id) }}
+        title="Remove menu item"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.name}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
 
+type DrinksConfirming =
+  | { type: 'customDrink'; id: string; name: string }
+  | { type: 'extraItem'; index: number; name: string }
+  | { type: 'quantity'; id: string; name: string }
+  | null
+
 export function DrinksPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<DrinksConfirming>(null)
   const [extraItem, setExtraItem] = useState('')
   const [qtyDraft, setQtyDraft] = useState({ name: '', quantity: 1 })
   const customDrinks = state.drinks.customDrinks ?? []
@@ -1530,7 +1584,7 @@ export function DrinksPage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => removeCustomDrink(drink.id)}
+                    onClick={() => setConfirmingRemove({ type: 'customDrink', id: drink.id, name: drink.name })}
                     className="px-2 py-1 text-xs text-red-400 hover:text-red-300"
                     title="Remove drink"
                     aria-label={`Remove ${drink.name}`}
@@ -1601,7 +1655,9 @@ export function DrinksPage() {
                 />
                 <Button
                   variant="ghost"
-                  onClick={() => removeExtraItem(entry.index)}
+                  onClick={() =>
+                    setConfirmingRemove({ type: 'extraItem', index: entry.index, name: entry.text || 'this item' })
+                  }
                   className="text-xs shrink-0"
                 >
                   Remove
@@ -1670,7 +1726,9 @@ export function DrinksPage() {
                         variant="ghost"
                         size="sm"
                         className="text-slate-400 hover:text-rose-400"
-                        onClick={() => removeDrinkQuantity(q.id)}
+                        onClick={() =>
+                          setConfirmingRemove({ type: 'quantity', id: q.id, name: q.name })
+                        }
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -1682,6 +1740,23 @@ export function DrinksPage() {
           </div>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => {
+          if (!confirmingRemove) return
+          if (confirmingRemove.type === 'customDrink') removeCustomDrink(confirmingRemove.id)
+          else if (confirmingRemove.type === 'extraItem') removeExtraItem(confirmingRemove.index)
+          else if (confirmingRemove.type === 'quantity') removeDrinkQuantity(confirmingRemove.id)
+        }}
+        title="Remove item"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.name}"? This cannot be undone.`
+            : ''
+        }
+      />
 
       <Card>
         <CardTitle>Drink pictures</CardTitle>
@@ -1708,6 +1783,7 @@ export function DrinksPage() {
 
 export function DecorPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
   const [draft, setDraft] = useState({
     name: '',
     zone: 'entry' as const,
@@ -1917,7 +1993,7 @@ export function DecorPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => setConfirmingRemove({ id: item.id, name: item.name })}
                   variant="outline"
                   className="px-3 py-1 text-xs"
                 >
@@ -1928,12 +2004,24 @@ export function DecorPage() {
           </div>
         )}
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) removeItem(confirmingRemove.id) }}
+        title="Remove decor item"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.name}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
 
 export function CleaningPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
   const [extraName, setExtraName] = useState('')
   const [extraQty, setExtraQty] = useState(1)
   const bathroomExtras = state.cleaning.bathroomExtras ?? []
@@ -2046,7 +2134,7 @@ export function CleaningPage() {
                       variant="ghost"
                       size="sm"
                       className="shrink-0 text-slate-400 hover:text-rose-400"
-                      onClick={() => removeBathroomExtra(item.id)}
+                      onClick={() => setConfirmingRemove({ id: item.id, name: item.name })}
                       aria-label={`Remove ${item.name}`}
                     >
                       <Trash2 className="size-4" />
@@ -2081,6 +2169,17 @@ export function CleaningPage() {
             </Button>
           </div>
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) removeBathroomExtra(confirmingRemove.id) }}
+        title="Remove item"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.name}" from checklist? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
@@ -2114,6 +2213,7 @@ function exportTaskAsIcs(
 
 export function TimelinePage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; title: string } | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [draft, setDraft] = useState({
     title: '',
@@ -2477,7 +2577,7 @@ export function TimelinePage() {
                     </Button>
                     <Button
                       type="button"
-                      onClick={() => removeTask(task.id)}
+                      onClick={() => setConfirmingRemove({ id: task.id, title: task.title })}
                       variant="outline"
                       className="px-3 py-1 text-xs"
                     >
@@ -2490,6 +2590,17 @@ export function TimelinePage() {
           </div>
         )}
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) removeTask(confirmingRemove.id) }}
+        title="Remove task"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.title}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
@@ -2599,6 +2710,7 @@ function GameQRCode({ url }: { url: string }) {
 
 export function GamesPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
   const [draft, setDraft] = useState({
     name: '',
     category: 'icebreaker' as const,
@@ -2778,7 +2890,7 @@ export function GamesPage() {
                   </div>
                   <Button
                     type="button"
-                    onClick={() => removeGame(game.id)}
+                    onClick={() => setConfirmingRemove({ id: game.id, name: game.name })}
                     variant="outline"
                     className="shrink-0 px-3 py-1 text-xs"
                   >
@@ -2790,6 +2902,17 @@ export function GamesPage() {
           </div>
         )}
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) removeGame(confirmingRemove.id) }}
+        title="Remove game"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.name}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
@@ -2927,6 +3050,7 @@ export function VenuePage() {
 
 export function EntryPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const [textDraft, setTextDraft] = useState('')
 
   const addText = () => {
@@ -2998,19 +3122,35 @@ export function EntryPage() {
               className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"
             >
               <span>{text}</span>
-              <Button variant="ghost" onClick={() => removeText(text)} className="text-xs">
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmingRemove(text)}
+                className="text-xs"
+              >
                 Remove
               </Button>
             </div>
           ))}
         </div>
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) removeText(confirmingRemove) }}
+        title="Remove arrival text"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
 
 export function LivePage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const [note, setNote] = useState('')
 
   const toggleAlert = (key: keyof typeof state.live.restockAlerts) => {
@@ -3120,7 +3260,7 @@ export function LivePage() {
               {entry}
               <Button
                 variant="ghost"
-                onClick={() => removeNote(entry)}
+                onClick={() => setConfirmingRemove(entry)}
                 className="text-xs"
                 aria-label={`Remove note: ${entry}`}
               >
@@ -3130,6 +3270,17 @@ export function LivePage() {
           ))}
         </ul>
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => { if (confirmingRemove) removeNote(confirmingRemove) }}
+        title="Remove note"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
@@ -3163,8 +3314,15 @@ function resizeDataUrl(dataUrl: string, maxDim: number): Promise<string> {
   })
 }
 
+type PhotoVideoConfirming =
+  | { type: 'shot'; id: string; name: string }
+  | { type: 'photo'; id: string }
+  | { type: 'equipment'; item: string }
+  | null
+
 export function PhotoVideoPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<PhotoVideoConfirming>(null)
   const [draft, setDraft] = useState({
     title: '',
     type: 'photo' as const,
@@ -3409,7 +3567,7 @@ export function PhotoVideoPage() {
                   </div>
                   <Button
                     type="button"
-                    onClick={() => removeShot(shot.id)}
+                    onClick={() => setConfirmingRemove({ type: 'shot', id: shot.id, name: shot.title })}
                     variant="outline"
                     className="px-3 py-1 text-xs"
                   >
@@ -3482,7 +3640,7 @@ export function PhotoVideoPage() {
                       type="button"
                       variant="outline"
                       className="p-1.5 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
-                      onClick={() => removePhoto(photo.id)}
+                      onClick={() => setConfirmingRemove({ type: 'photo', id: photo.id })}
                       aria-label="Remove photo"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -3517,7 +3675,7 @@ export function PhotoVideoPage() {
               <span>{item}</span>
               <Button
                 variant="ghost"
-                onClick={() => removeEquipment(item)}
+                onClick={() => setConfirmingRemove({ type: 'equipment', item })}
                 className="text-xs"
               >
                 Remove
@@ -3526,6 +3684,26 @@ export function PhotoVideoPage() {
           ))}
         </ul>
       </Card>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => {
+          if (!confirmingRemove) return
+          if (confirmingRemove.type === 'shot') removeShot(confirmingRemove.id)
+          else if (confirmingRemove.type === 'photo') removePhoto(confirmingRemove.id)
+          else if (confirmingRemove.type === 'equipment') removeEquipment(confirmingRemove.item)
+        }}
+        title="Remove item"
+        description={
+          confirmingRemove
+            ? confirmingRemove.type === 'shot'
+              ? `Remove shot "${confirmingRemove.name}"? This cannot be undone.`
+              : confirmingRemove.type === 'photo'
+                ? 'Remove this photo? This cannot be undone.'
+                : `Remove "${confirmingRemove.item}"? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   )
 }
@@ -3538,8 +3716,14 @@ const PLAYLIST_PHASES = [
   { key: 'windDown' as const, label: 'Wind down' },
 ]
 
+type PostPartyConfirming =
+  | { type: 'cleanup'; item: string }
+  | { type: 'leftover'; item: string }
+  | null
+
 export function PostPartyPage() {
   const { state, dispatch } = useParty()
+  const [confirmingRemove, setConfirmingRemove] = useState<PostPartyConfirming>(null)
   const [cleanupItem, setCleanupItem] = useState('')
   const [leftoverItem, setLeftoverItem] = useState('')
 
@@ -3637,7 +3821,7 @@ export function PostPartyPage() {
               {item}
               <Button
                 variant="ghost"
-                onClick={() => removeCleanup(item)}
+                onClick={() => setConfirmingRemove({ type: 'cleanup', item })}
                 className="text-xs"
                 aria-label={`Remove ${item}`}
               >
@@ -3670,7 +3854,7 @@ export function PostPartyPage() {
               {item}
               <Button
                 variant="ghost"
-                onClick={() => removeLeftover(item)}
+                onClick={() => setConfirmingRemove({ type: 'leftover', item })}
                 className="text-xs"
                 aria-label={`Remove ${item}`}
               >
@@ -3680,6 +3864,22 @@ export function PostPartyPage() {
           ))}
         </ul>
       </Card>
+
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={() => {
+          if (!confirmingRemove) return
+          if (confirmingRemove.type === 'cleanup') removeCleanup(confirmingRemove.item)
+          else removeLeftover(confirmingRemove.item)
+        }}
+        title="Remove item"
+        description={
+          confirmingRemove
+            ? `Remove "${confirmingRemove.item}"? This cannot be undone.`
+            : ''
+        }
+      />
 
       <Card>
         <CardTitle>Favorites</CardTitle>

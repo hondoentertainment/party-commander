@@ -1,25 +1,15 @@
-import { useEffect, useState } from 'react'
-import {
-  compareAsc,
-  differenceInHours,
-  differenceInMinutes,
-  differenceInDays,
-  isAfter,
-  parseISO,
-} from 'date-fns'
+import { useEffect } from 'react'
+import { compareAsc, isAfter, parseISO } from 'date-fns'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin, User, MoreVertical } from 'lucide-react'
+import { ChevronRight, Music, AlertCircle, CheckCircle2, LayoutDashboard, Calendar, Utensils, GlassWater, Sparkles, MapPin, User } from 'lucide-react'
 import { SectionHeader } from '../components/SectionHeader'
 import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
-import { addPartyToHiddenFromHome, getHiddenFromHomePartyIds } from '../state/storage'
-
 export function Dashboard() {
-  const { state, switchParty, currentPartyId, parties } = useParty()
+  const { state, switchParty } = useParty()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [menuOpen, setMenuOpen] = useState(false)
   const partyIdFromUrl = searchParams.get('party')
 
   useEffect(() => {
@@ -30,17 +20,6 @@ export function Dashboard() {
       setSearchParams(next, { replace: true })
     }).catch(() => {})
   }, [partyIdFromUrl, switchParty])
-
-  const partyDate = state.core.date ? parseISO(state.core.date) : null
-  const isValidDate = partyDate && !isNaN(partyDate.getTime())
-
-  const countdown = isValidDate
-    ? {
-      days: differenceInDays(partyDate, new Date()),
-      hours: differenceInHours(partyDate, new Date()) % 24,
-      minutes: differenceInMinutes(partyDate, new Date()) % 60,
-    }
-    : null
 
   const readiness = [
     {
@@ -75,10 +54,6 @@ export function Dashboard() {
     .filter((task) => task.status !== 'done')
     .slice(0, 3)
 
-  const readyCount = readiness.filter((item) => item.ready).length
-  const liveAlerts = Object.values(state.live.restockAlerts).filter(Boolean).length
-  const liveLabel = liveAlerts === 0 ? 'Optimal Flow' : 'Action Required'
-  const readinessPercent = Math.round((readyCount / readiness.length) * 100)
   const now = new Date()
   const upcomingEvents = state.events.items
     .filter((event) => event.date)
@@ -89,130 +64,15 @@ export function Dashboard() {
   const nextEvent = upcomingEvents[0] ?? (state.events.items.length === 0 && (state.core.name || state.core.date || state.core.location)
     ? { name: state.core.name || 'My Party', date: state.core.date, location: state.core.location, link: '', leadName: undefined as string | undefined }
     : null)
-  const archivedEvents =
-    state.events.items.filter((event) => {
-      if (!event.date) return false
-      const d = parseISO(event.date)
-      return !isNaN(d.getTime()) && !isAfter(d, now)
-    }).length
 
   return (
     <div className="space-y-8 pb-32">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-slate-950/50 p-8 md:p-12">
-        <div className="glow-orb" />
-        <div className="glow-sweep" />
-
-        <div className="relative z-10 grid gap-12 lg:grid-cols-[2fr_1.2fr]">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-6xl">
-                {state.core.name || 'Party Command'}
-              </h1>
-              <p className="text-lg font-medium text-slate-400">
-                {state.core.location || 'Your next world-class event starts here.'}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <Link to="/timeline">
-                <Button size="lg" className="rounded-2xl px-8 shadow-lg shadow-emerald-500/20">
-                  View Timeline
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          <div className="relative flex gap-4">
-            <div className="flex-1 space-y-4">
-              <div className="rounded-[2rem] border border-white/5 bg-black/40 p-6 backdrop-blur-xl">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Readiness</span>
-                <span className="text-lg font-bold text-emerald-400">{readinessPercent}%</span>
-              </div>
-              <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000"
-                  style={{ width: `${readinessPercent}%` }}
-                />
-              </div>
-              <p className="mt-3 text-xs font-medium text-slate-400">
-                {readyCount} of {readiness.length} key milestones completed
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-3xl border border-white/5 bg-black/40 p-5 backdrop-blur-xl">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Impact</span>
-                <p className="mt-2 text-2xl font-bold text-white">{state.invites.guestCount}</p>
-                <div className="flex items-center justify-between text-[10px] text-slate-500">
-                  <span>Guests Confirmed</span>
-                  {countdown && (
-                    <span className="text-emerald-500 font-bold">
-                      T-{countdown.days}d {countdown.hours}h
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="rounded-3xl border border-white/5 bg-black/40 p-5 backdrop-blur-xl">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</span>
-                <p className="mt-2 text-xl font-bold text-emerald-400">{liveLabel}</p>
-                <p className="text-[10px] text-slate-500">
-                  {liveAlerts} active alerts · {archivedEvents} archived
-                </p>
-              </div>
-            </div>
-            </div>
-            {currentPartyId && parties.length > 1 && (
-              <div className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen((o) => !o)}
-                  className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-black/40 text-slate-300 transition hover:bg-white/10 hover:text-white"
-                  aria-expanded={menuOpen}
-                  aria-haspopup="menu"
-                  aria-label="Party options"
-                >
-                  <MoreVertical className="size-5" />
-                </button>
-                {menuOpen && (
-                  <>
-                    <div aria-hidden="true" className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                    <div
-                      role="menu"
-                      className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-xl border border-white/10 bg-slate-900/95 py-2 shadow-xl backdrop-blur-xl"
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          if (currentPartyId) {
-                            addPartyToHiddenFromHome(currentPartyId)
-                            const hidden = new Set(getHiddenFromHomePartyIds())
-                            const next = parties.find((p) => !hidden.has(p.id))
-                            if (next) switchParty(next.id).then(() => setMenuOpen(false))
-                            else setMenuOpen(false)
-                          }
-                        }}
-                        className="w-full px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
-                      >
-                        Remove from Home
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Middle Column: Status Ticker & Upcoming */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           <SectionHeader
             title="Operational Snapshot"
             subtitle="Real-time preparation metrics and upcoming milestones."
+            eyebrow="Overview"
           />
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -266,7 +126,7 @@ export function Dashboard() {
                     item.ready ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-300" : "border-white/5 bg-white/5 text-slate-500"
                   )}>
                     {item.ready ? <CheckCircle2 className="size-3" /> : item.icon}
-                    <span className="text-[11px] font-bold uppercase tracking-tight">{item.label}</span>
+                    <span className="text-xs font-bold uppercase tracking-tight">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -280,7 +140,7 @@ export function Dashboard() {
                 Critical Path
               </CardTitle>
               <Link to="/timeline" className="text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors">
-                Override View
+                View full timeline
               </Link>
             </div>
             <div className="space-y-3">

@@ -25,6 +25,7 @@ export function Button({ className, variant = 'primary', size = 'md', ...props }
         className,
       )}
       {...props}
+      aria-disabled={props.disabled}
     >
       <span className="relative z-10">{props.children}</span>
       <div className="absolute inset-0 z-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 transition-opacity group-hover:opacity-100" />

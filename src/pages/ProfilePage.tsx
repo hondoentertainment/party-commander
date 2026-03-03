@@ -214,6 +214,7 @@ export function ProfilePage() {
     const [displayName, setDisplayName] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [saveSuccess, setSaveSuccess] = useState(false)
 
     const user = state.auth.user as { id: string; email?: string; user_metadata?: { avatar_url?: string; full_name?: string } } | null
 
@@ -243,9 +244,12 @@ export function ProfilePage() {
         e.preventDefault()
         if (!user?.id) return
         setSaving(true)
+        setSaveSuccess(false)
         try {
             const updated = await ProfileService.upsert(user.id, { display_name: displayName || null })
             setProfile(updated)
+            setSaveSuccess(true)
+            setTimeout(() => setSaveSuccess(false), 3000)
         } catch {
             // ignore
         } finally {
@@ -310,8 +314,13 @@ export function ProfilePage() {
                             />
                         </div>
 
+                        {saveSuccess && (
+                            <p className="text-sm font-medium text-emerald-400" role="status">
+                                Profile saved.
+                            </p>
+                        )}
                         <div className="flex gap-3">
-                            <Button type="submit" disabled={saving}>
+                            <Button type="submit" disabled={saving} aria-disabled={saving}>
                                 {saving ? <Loader2 className="size-4 animate-spin" /> : 'Save changes'}
                             </Button>
                             <Button

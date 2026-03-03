@@ -1,9 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Users, Copy, Loader2, Trash2 } from 'lucide-react'
 import { Button } from './ui/Button'
+import { ConfirmDialog } from './ui/ConfirmDialog'
 import { CollaboratorService, type PartyCollaborator } from '../services/collaborators'
+import { ProfileService } from '../services/profile'
 import { useParty } from '../state/PartyContext'
 import { cn } from './ui/utils'
+
+const FOCUSABLE =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
 interface SharePartyModalProps {
   open: boolean
@@ -18,6 +23,9 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [confirmingRemove, setConfirmingRemove] = useState<{ userId: string; displayName: string } | null>(null)
+  const [displayNames, setDisplayNames] = useState<Record<string, string>>({})
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   const currentParty = parties.find((p) => p.id === currentPartyId)
   const isOwner = currentParty && partyProfile && currentParty.party_profile_id === partyProfile.id
@@ -31,6 +39,14 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
       try {
         const list = await CollaboratorService.list(currentPartyId)
         setCollaborators(list)
+        const names: Record<string, string> = {}
+        await Promise.all(
+          list.map(async (c) => {
+            const profile = await ProfileService.get(c.user_id)
+            names[c.user_id] = profile?.display_name ?? c.user_id.slice(0, 8)
+          }),
+        )
+        setDisplayNames(names)
       } catch {
         setError('Failed to load collaborators')
       } finally {
@@ -40,6 +56,44 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
 
     load()
   }, [open, currentPartyId, isOwner])
+
+  useEffect(() => {
+    if (!open) return
+    const el = dialogRef.current
+    if (!el) return
+
+    const focusable = el.querySelectorAll<HTMLElement>(FOCUSABLE)
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    first?.focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        previouslyFocused?.focus()
+        return
+      }
+      if (e.key !== 'Tab') return
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault()
+          last?.focus()
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault()
+          first?.focus()
+        }
+      }
+    }
+    el.addEventListener('keydown', handleKeyDown)
+    return () => {
+      el.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [open, onClose])
 
   const handleCreateLink = async () => {
     if (!currentPartyId) return
@@ -68,10 +122,11 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
     }
   }
 
-  const handleRemove = async (userId: string) => {
+  const doRemoveCollaborator = async (userId: string) => {
     if (!currentPartyId) return
     setRemovingId(userId)
     setError(null)
+    setConfirmingRemove(null)
     try {
       await CollaboratorService.remove(currentPartyId, userId)
       setCollaborators((prev) => prev.filter((c) => c.user_id !== userId))
@@ -93,6 +148,7 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
         onClick={onClose}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="share-party-title"
@@ -133,25 +189,32 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
               {loading ? <Loader2 className="size-4 animate-spin" /> : 'Create invite link'}
             </Button>
           ) : (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={inviteLink}
-                className="flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-slate-300"
-              />
-              <Button
-                variant="outline"
-                onClick={handleCopy}
-                className="shrink-0 rounded-xl"
-                aria-label={copied ? 'Copied' : 'Copy link'}
-              >
-                {copied ? (
-                  <span className="text-emerald-400">Copied</span>
-                ) : (
-                  <Copy className="size-4" />
-                )}
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={inviteLink}
+                  className="flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-slate-300"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleCopy}
+                  className="shrink-0 rounded-xl"
+                  aria-label={copied ? 'Copied' : 'Copy link'}
+                >
+                  {copied ? (
+                    <span className="text-emerald-400">Copied</span>
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                </Button>
+              </div>
+              {copied && (
+                <p className="text-xs font-medium text-emerald-400" role="status">
+                  Link copied to clipboard.
+                </p>
+              )}
             </div>
           )}
 
@@ -174,11 +237,16 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
                   className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-2.5"
                 >
                   <span className="text-sm text-slate-300">
-                    {c.user_id.slice(0, 8)}…
+                    {displayNames[c.user_id] ?? c.user_id.slice(0, 8)}…
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleRemove(c.user_id)}
+                    onClick={() =>
+                      setConfirmingRemove({
+                        userId: c.user_id,
+                        displayName: displayNames[c.user_id] ?? c.user_id.slice(0, 8),
+                      })
+                    }
                     disabled={removingId === c.user_id}
                     className={cn(
                       'rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-500/20 hover:text-rose-400',
@@ -204,6 +272,22 @@ export function SharePartyModal({ open, onClose }: SharePartyModalProps) {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!confirmingRemove}
+        onClose={() => setConfirmingRemove(null)}
+        onConfirm={async () => {
+          if (confirmingRemove) await doRemoveCollaborator(confirmingRemove.userId)
+        }}
+        title="Remove team member"
+        description={
+          confirmingRemove
+            ? `Remove ${confirmingRemove.displayName} from this party? They will lose access.`
+            : ''
+        }
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        isLoading={!!removingId}
+      />
     </>
   )
 }

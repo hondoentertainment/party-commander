@@ -57,7 +57,7 @@ export const MODULES: ModuleConfig[] = [
   { id: 'budget', to: '/budget', label: 'Budget', icon: DollarSign, canDisable: true },
   { id: 'invites', to: '/invites', label: 'Invites', icon: Users, canDisable: true },
   { id: 'events', to: '/events', label: 'Events', icon: Calendar, canDisable: true },
-  { id: 'leads', to: '/leads', label: 'Leads', icon: UserCog, canDisable: true },
+  { id: 'leads', to: '/leads', label: 'Team Roles', icon: UserCog, canDisable: true },
   { id: 'food', to: '/food', label: 'Food', icon: UtensilsCrossed, canDisable: true },
   { id: 'drinks', to: '/drinks', label: 'Drinks', icon: GlassWater, canDisable: true },
   { id: 'decor', to: '/decor', label: 'Decor', icon: Wand2, canDisable: true },

@@ -21,4 +21,21 @@ test.describe('Party Planning App', () => {
     await page.keyboard.press('Enter')
     await expect(page.locator('#main-content')).toBeInViewport()
   })
+
+  test('Budget remove shows confirmation and removes on confirm', async ({ page }) => {
+    await page.goto('/budget')
+    await page.getByPlaceholder(/ice, cups, napkins/i).fill('Test item')
+    await page.getByPlaceholder(/24\.99/i).fill('25')
+    await page.getByRole('button', { name: /add item/i }).click()
+    await expect(page.getByDisplayValue('Test item')).toBeVisible()
+
+    await page.getByRole('button', { name: /remove/i }).first().click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText(/remove "test item"/i)).toBeVisible()
+
+    await dialog.getByRole('button', { name: /^remove$/i }).click()
+    await expect(dialog).not.toBeVisible()
+    await expect(page.getByDisplayValue('Test item')).not.toBeVisible()
+  })
 })

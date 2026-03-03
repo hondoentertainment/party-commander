@@ -6,7 +6,7 @@ import { useParty } from '../state/PartyContext'
 import { User } from 'lucide-react'
 
 export function AppShell() {
-  const online = useOnlineStatus()
+  const { online, syncing } = useOnlineStatus()
   const { state, partyProfile } = useParty()
   const user = state.auth.user as { user_metadata?: { avatar_url?: string; full_name?: string } } | null
 
@@ -35,6 +35,10 @@ export function AppShell() {
         {!online ? (
           <div className="border-b border-amber-400/30 bg-amber-500/10 px-6 py-2 text-sm text-amber-200">
             Offline mode enabled. Changes stay on device.
+          </div>
+        ) : syncing ? (
+          <div className="border-b border-emerald-400/30 bg-emerald-500/10 px-6 py-2 text-sm text-emerald-200">
+            Back online. Syncing changes…
           </div>
         ) : null}
         <header className="relative overflow-hidden border-b border-white/10 bg-black/30 px-6 py-6 backdrop-blur-xl">
@@ -76,7 +80,7 @@ export function AppShell() {
         </main>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-white/10 bg-black/60 backdrop-blur-xl md:hidden">
+      <div className="fixed inset-x-0 bottom-0 border-t border-white/10 bg-black/60 backdrop-blur-xl pb-[env(safe-area-inset-bottom,0px)] md:hidden">
         <Navigation layout="bottom" />
       </div>
     </div>

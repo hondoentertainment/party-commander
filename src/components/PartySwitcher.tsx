@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, Plus, Users } from 'lucide-react'
 import { useParty } from '../state/PartyContext'
 import { getHiddenFromHomePartyIds } from '../state/storage'
@@ -6,11 +6,15 @@ import { Button } from './ui/Button'
 import { SharePartyModal } from './SharePartyModal'
 import { cn } from './ui/utils'
 
+const FOCUSABLE =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
 export function PartySwitcher() {
   const { partyProfile, parties, currentPartyId, switchParty, createParty, state } = useParty()
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const hidden = new Set(getHiddenFromHomePartyIds())
   const visibleParties = parties.filter((p) => !hidden.has(p.id))
@@ -36,6 +40,55 @@ export function PartySwitcher() {
     }
   }
 
+  useEffect(() => {
+    if (!open) return
+    const el = listRef.current
+    if (!el) return
+
+    const focusable = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE))
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    first?.focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setOpen(false)
+        previouslyFocused?.focus()
+        return
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        const idx = focusable.indexOf(document.activeElement as HTMLElement)
+        const nextIdx = idx < 0 ? 0 : Math.min(idx + 1, focusable.length - 1)
+        focusable[nextIdx]?.focus()
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        const idx = focusable.indexOf(document.activeElement as HTMLElement)
+        const prevIdx = idx <= 0 ? focusable.length - 1 : idx - 1
+        focusable[prevIdx]?.focus()
+        return
+      }
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last?.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first?.focus()
+        }
+      }
+    }
+    el.addEventListener('keydown', handleKeyDown)
+    return () => {
+      el.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [open])
+
   return (
     <div className="relative">
       <button
@@ -58,7 +111,9 @@ export function PartySwitcher() {
             onClick={() => setOpen(false)}
           />
           <div
+            ref={listRef}
             role="listbox"
+            aria-label="Switch party"
             className="absolute right-0 top-full z-50 mt-2 min-w-[220px] rounded-2xl border border-white/10 bg-slate-900/95 py-2 shadow-xl backdrop-blur-xl"
           >
             <div className="max-h-64 overflow-y-auto">
