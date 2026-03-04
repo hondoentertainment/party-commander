@@ -5,6 +5,7 @@ import { ModuleGuard } from './components/ModuleGuard'
 import { AdminGuard } from './components/AdminGuard'
 import { AuthGate } from './components/AuthGate'
 import { AuthCallback } from './pages/AuthCallback'
+import { ResetPassword } from './pages/ResetPassword'
 import { AdminPage } from './pages/AdminPage'
 import { InvitePage } from './pages/InvitePage'
 import { Dashboard } from './pages/Dashboard'
@@ -35,6 +36,7 @@ function App() {
   return (
     <Routes>
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invite/party/:token" element={<InvitePage />} />
       <Route element={<AppShell />}>
         <Route element={<AuthGate />}>

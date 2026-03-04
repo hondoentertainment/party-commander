@@ -79,8 +79,9 @@ export const AuthService = {
     },
 
     async resetPasswordForEmail(email: string) {
+        const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') || ''
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
+            redirectTo: `${window.location.origin}${base}/reset-password`,
         })
         return { error }
     },

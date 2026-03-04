@@ -93,9 +93,10 @@ export function AuthGate() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [mode, setMode] = useState<'signin' | 'signup'>('signup')
-    const [authMethod, setAuthMethod] = useState<'password' | 'magic' | null>(null)
+    const [authMethod, setAuthMethod] = useState<'password' | 'magic' | 'reset' | null>(null)
     const [magicLinkSent, setMagicLinkSent] = useState(false)
     const [emailConfirmationSent, setEmailConfirmationSent] = useState(false)
+    const [resetEmailSent, setResetEmailSent] = useState(false)
     const [demoLoading, setDemoLoading] = useState(false)
 
     if (!state.auth.initialized) {
@@ -154,6 +155,23 @@ export function AuthGate() {
         }
     }
 
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoading(true)
+        setError(null)
+        setResetEmailSent(false)
+
+        try {
+            const { error } = await AuthService.resetPasswordForEmail(email)
+            if (error) throw error
+            setResetEmailSent(true)
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to send reset link')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleSimulate = async () => {
         setDemoLoading(true)
         setError(null)
@@ -167,9 +185,11 @@ export function AuthGate() {
         }
     }
 
-    const showPasswordForm = authMethod === 'password' || (!authMethod && !magicLinkSent && !emailConfirmationSent)
+    const showPasswordForm = authMethod === 'password' || (!authMethod && !magicLinkSent && !emailConfirmationSent && !resetEmailSent)
     const showMagicForm = authMethod === 'magic' && !magicLinkSent
+    const showResetForm = authMethod === 'reset' && !resetEmailSent
     const showMagicSuccess = authMethod === 'magic' && magicLinkSent
+    const showResetSuccess = authMethod === 'reset' && resetEmailSent
     const showEmailConfirmSuccess = emailConfirmationSent
 
     return (
@@ -267,6 +287,38 @@ export function AuthGate() {
                             )}
                         </AnimatePresence>
 
+                        {/* Reset password success */}
+                        <AnimatePresence>
+                            {showResetSuccess && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0 }}
+                                    className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-4"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <MailCheck className="size-5 shrink-0 text-emerald-400" />
+                                        <div>
+                                            <p className="font-semibold text-emerald-200">Check your email</p>
+                                            <p className="mt-1 text-sm text-slate-300">
+                                                We sent a password reset link to <span className="font-medium text-white">{email}</span>
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setResetEmailSent(false)
+                                                    setAuthMethod('password')
+                                                }}
+                                                className="mt-3 text-xs font-medium text-emerald-400 hover:underline"
+                                            >
+                                                Back to sign in
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         {/* Magic link success */}
                         <AnimatePresence>
                             {showMagicSuccess && (
@@ -298,6 +350,33 @@ export function AuthGate() {
                                 </motion.div>
                             )}
                         </AnimatePresence>
+
+                        {/* Reset password form */}
+                        {showResetForm && (
+                            <form onSubmit={handleResetPassword} className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Email</label>
+                                    <Input
+                                        type="email"
+                                        placeholder="you@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        className="rounded-2xl border-white/5 bg-black/20 focus:bg-black/40"
+                                    />
+                                </div>
+                                <Button type="submit" size="lg" className="w-full rounded-2xl" disabled={loading}>
+                                    {loading ? <Loader2 className="size-4 animate-spin" /> : <><Mail className="size-4" /> Send reset link</>}
+                                </Button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAuthMethod('password')}
+                                    className="w-full text-xs text-slate-500 hover:text-emerald-400"
+                                >
+                                    Back to sign in
+                                </button>
+                            </form>
+                        )}
 
                         {/* Magic link form */}
                         {showMagicForm && (
@@ -341,7 +420,18 @@ export function AuthGate() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Password</label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Password</label>
+                                        {mode === 'signin' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setAuthMethod('reset')}
+                                                className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/60 hover:text-emerald-400 transition-colors"
+                                            >
+                                                Forgot?
+                                            </button>
+                                        )}
+                                    </div>
                                     <Input
                                         type="password"
                                         placeholder="••••••••"
@@ -360,6 +450,16 @@ export function AuthGate() {
                                 >
                                     {loading ? <Loader2 className="size-4 animate-spin" /> : mode === 'signin' ? 'Sign In' : 'Create account'}
                                 </Button>
+
+                                {mode === 'signin' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setAuthMethod('reset')}
+                                        className="w-full text-center text-sm text-slate-500 hover:text-emerald-400 transition-colors"
+                                    >
+                                        Forgot your password?
+                                    </button>
+                                )}
 
                                 <div className="flex justify-end">
                                     <button
