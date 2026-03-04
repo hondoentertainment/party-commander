@@ -1,21 +1,55 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Sparkles, Loader2 } from 'lucide-react'
 import { useParty } from '../state/PartyContext'
 import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { SectionHeader } from '../components/SectionHeader'
 
 export function GlobalDashboard() {
-    const { parties, createParty, partyProfile } = useParty()
+    const { parties, createParty, partyProfile, partyLoading, state } = useParty()
     const navigate = useNavigate()
+    const [creating, setCreating] = useState(false)
+    const [createError, setCreateError] = useState<string | null>(null)
 
     const handleCreate = async () => {
-        const id = await createParty(false)
-        navigate(`/event/${id}`)
+        if (!partyProfile || creating) return
+        setCreating(true)
+        setCreateError(null)
+        try {
+            const id = await createParty(false)
+            navigate(`/event/${id}`)
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Failed to create event'
+            if (msg.includes('No party profile') || msg.includes('profile')) {
+                setCreateError('Please wait a moment for your profile to load, then try again.')
+            } else if (msg.includes('does not exist') || msg.includes('relation')) {
+                setCreateError('Database setup may be incomplete. Run Supabase migrations.')
+            } else {
+                setCreateError(msg)
+            }
+        } finally {
+            setCreating(false)
+        }
     }
+
+    const canCreate = partyProfile && !partyLoading && !creating
+    const profileFailed = !partyLoading && !partyProfile && state.auth.user
 
     return (
         <div className="space-y-8 pb-32">
+            {profileFailed && (
+                <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <p className="text-sm text-rose-200">Unable to load your profile. Check your connection or try signing out and back in.</p>
+                    <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="shrink-0 rounded-xl bg-rose-500/20 px-4 py-2 text-sm font-semibold text-rose-300 hover:bg-rose-500/30"
+                    >
+                        Refresh
+                    </button>
+                </div>
+            )}
             <SectionHeader
                 title="Intelligence Hub"
                 subtitle="Manage your entire portfolio of premium events."
@@ -52,11 +86,27 @@ export function GlobalDashboard() {
                     )
                 })}
 
-                <Card className="flex flex-col items-center justify-center border-dashed border-2 py-12 text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors cursor-pointer group" onClick={handleCreate}>
+                <Card
+                    className={`flex flex-col items-center justify-center border-dashed border-2 py-12 transition-colors cursor-pointer group ${
+                        canCreate
+                            ? 'text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400'
+                            : 'text-slate-600 cursor-not-allowed opacity-60'
+                    }`}
+                    onClick={canCreate ? handleCreate : undefined}
+                >
+                    {createError && (
+                        <p className="mb-4 text-sm text-rose-400 max-w-xs text-center">{createError}</p>
+                    )}
                     <div className="rounded-full bg-slate-900 p-4 mb-4 group-hover:bg-emerald-500/10 transition-colors">
-                        <Plus className="size-8" />
+                        {creating ? (
+                            <Loader2 className="size-8 animate-spin text-emerald-400" />
+                        ) : (
+                            <Plus className="size-8" />
+                        )}
                     </div>
-                    <span className="font-semibold tracking-wide">Initialize New Event</span>
+                    <span className="font-semibold tracking-wide">
+                        {creating ? 'Creating…' : 'Initialize New Event'}
+                    </span>
                 </Card>
             </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { supabase, AuthService } from '../services/auth'
 import { Card } from './ui/Card'
@@ -22,6 +22,39 @@ function isDomainAllowed(email: string): boolean {
     if (domains.length === 0) return true
     const domain = email.split('@')[1]?.toLowerCase() ?? ''
     return domains.includes(domain)
+}
+
+function AuthLoadingFallback() {
+    const [timedOut, setTimedOut] = useState(false)
+    const mounted = useRef(true)
+    useEffect(() => {
+        const t = setTimeout(() => {
+            if (mounted.current) setTimedOut(true)
+        }, 10000)
+        return () => {
+            mounted.current = false
+            clearTimeout(t)
+        }
+    }, [])
+    if (timedOut) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4 overflow-y-auto bg-[#020617] px-6">
+                <p className="text-center text-slate-300">Having trouble connecting. Check your connection or Supabase settings.</p>
+                <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="rounded-xl bg-emerald-500/20 px-6 py-2.5 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/30"
+                >
+                    Refresh
+                </button>
+            </div>
+        )
+    }
+    return (
+        <div className="flex min-h-screen items-center justify-center overflow-y-auto bg-[#020617]">
+            <Loader2 className="size-8 animate-spin text-emerald-500" />
+        </div>
+    )
 }
 
 function AccessDenied({ email }: { email: string }) {
@@ -100,11 +133,7 @@ export function AuthGate() {
     const [demoLoading, setDemoLoading] = useState(false)
 
     if (!state.auth.initialized) {
-        return (
-            <div className="flex min-h-screen items-center justify-center overflow-y-auto bg-[#020617]">
-                <Loader2 className="size-8 animate-spin text-emerald-500" />
-            </div>
-        )
+        return <AuthLoadingFallback />
     }
 
     if (state.auth.user) {

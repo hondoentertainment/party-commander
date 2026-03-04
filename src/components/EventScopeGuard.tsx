@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import { useParty } from '../state/PartyContext'
 
 export function EventScopeGuard() {
@@ -10,7 +11,7 @@ export function EventScopeGuard() {
     useEffect(() => {
         if (partyLoading || !eventId) return
 
-        const eventExists = parties.some((p) => p.id === eventId)
+        const eventExists = parties.some((p) => p.id === eventId) || currentPartyId === eventId
         if (!eventExists) {
             // If the URL has an eventId that doesn't exist, boot them to home
             navigate('/', { replace: true })
@@ -26,8 +27,11 @@ export function EventScopeGuard() {
     }, [eventId, currentPartyId, partyLoading, parties, switchParty, navigate])
 
     if (currentPartyId !== eventId) {
-        // Optionally render a unified skeleton/spinner here while switching
-        return null
+        return (
+            <div className="flex min-h-[40vh] items-center justify-center">
+                <Loader2 className="size-10 animate-spin text-emerald-500" />
+            </div>
+        )
     }
 
     return <Outlet />

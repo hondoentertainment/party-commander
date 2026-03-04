@@ -214,14 +214,22 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
     [partyProfile, state]
   )
 
-  // Auth state change
+  // Auth state change + bootstrap getSession (prevents infinite spinner if callback is delayed)
   useEffect(() => {
+    let mounted = true
+    const init = (user: unknown) => {
+      if (mounted) dispatch({ type: 'update_auth', payload: { user, initialized: true } })
+    }
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      dispatch({ type: 'update_auth', payload: { user: session?.user ?? null, initialized: true } })
+    } = supabase.auth.onAuthStateChange((_event, session) => init(session?.user ?? null))
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) init(session?.user ?? null)
     })
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   // Load party profile and parties when user logs in
