@@ -213,38 +213,45 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
 
   const createParty = useCallback(
     async (useCurrentState = true): Promise<string> => {
-      if (!partyProfile) throw new Error('No party profile')
       const initialState = useCurrentState ? state : { ...defaultPartyState, core: { ...defaultPartyState.core, name: '' }, auth: state.auth }
-      try {
-        const row = await PartyService.create(partyProfile.id, initialState)
-        setCurrentPartyId(row.id)
-        setLastPartyId(row.id)
-        setParties((prev) => [row, ...prev])
-        if (!useCurrentState) {
-          dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
+      const profileId = partyProfile?.id ?? 'local'
+
+      // Try Supabase first if we have a real profile
+      if (partyProfile) {
+        try {
+          const row = await PartyService.create(partyProfile.id, initialState)
+          setCurrentPartyId(row.id)
+          setLastPartyId(row.id)
+          setParties((prev) => [row, ...prev])
+          if (!useCurrentState) {
+            dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
+          }
+          return row.id
+        } catch {
+          // Fall through to local creation
         }
-        return row.id
-      } catch {
-        const id = uuid()
-        const now = new Date().toISOString()
-        const { auth: _a, ...stateForStore } = initialState
-        const row: PartyRow = {
-          id,
-          party_profile_id: partyProfile.id,
-          name: initialState.core.name || 'New Party',
-          state: stateForStore,
-          created_at: now,
-          updated_at: now,
-        }
-        addLocalParty(row)
-        setCurrentPartyId(id)
-        setLastPartyId(id)
-        setParties((prev) => [row, ...prev])
-        if (!useCurrentState) {
-          dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
-        }
-        return id
       }
+
+      // Fallback: create locally
+      const id = uuid()
+      const now = new Date().toISOString()
+      const { auth: _a, ...stateForStore } = initialState
+      const row: PartyRow = {
+        id,
+        party_profile_id: profileId,
+        name: initialState.core.name || 'New Party',
+        state: stateForStore,
+        created_at: now,
+        updated_at: now,
+      }
+      addLocalParty(row)
+      setCurrentPartyId(id)
+      setLastPartyId(id)
+      setParties((prev) => [row, ...prev])
+      if (!useCurrentState) {
+        dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
+      }
+      return id
     },
     [partyProfile, state]
   )
