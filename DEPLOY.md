@@ -69,4 +69,6 @@ In **Supabase** → **Authentication** → **URL Configuration**, add your Verce
 Add these to Supabase → Authentication → Redirect URLs:
 
 - **GitHub Pages:** `https://hondoentertainment.github.io/party-commander/auth/callback`
+- **GitHub Pages (password reset):** `https://hondoentertainment.github.io/party-commander/reset-password`
 - **Vercel:** `https://YOUR_VERCEL_DOMAIN/auth/callback` and `https://*.vercel.app/auth/callback`
+- **Vercel (password reset):** `https://YOUR_VERCEL_DOMAIN/reset-password` and `https://*.vercel.app/reset-password`
