@@ -150,7 +150,7 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
   const [partyProfile, setPartyProfile] = useState<PartyProfile | null>(null)
   const [currentPartyId, setCurrentPartyId] = useState<string | null>(null)
   const [parties, setParties] = useState<PartyRow[]>([])
-  const [partyLoading, setPartyLoading] = useState(false)
+  const [partyLoading, setPartyLoading] = useState(true)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [state, dispatch] = useReducer(reducer, defaultPartyState, () => {
