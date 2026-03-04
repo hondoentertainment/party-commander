@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Sparkles, Loader2 } from 'lucide-react'
 import { useParty } from '../state/PartyContext'
+import { getLocalParties } from '../state/storage'
 import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { SectionHeader } from '../components/SectionHeader'
@@ -35,9 +36,18 @@ export function GlobalDashboard() {
 
     const canCreate = partyProfile && !partyLoading && !creating
     const profileFailed = !partyLoading && !partyProfile && state.auth.user
+    const localIds = new Set(getLocalParties().map((p) => p.id))
+    const hasLocalParties = partyProfile && parties.some((p) => localIds.has(p.id))
 
     return (
         <div className="space-y-8 pb-32">
+            {hasLocalParties && (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center gap-3">
+                    <span className="text-sm text-amber-200">
+                        Some events are saved locally. Run Supabase migrations to sync to the cloud.
+                    </span>
+                </div>
+            )}
             {profileFailed && (
                 <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <p className="text-sm text-rose-200">Unable to load your profile. Check your connection or try signing out and back in.</p>
@@ -59,11 +69,17 @@ export function GlobalDashboard() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {parties.map((party) => {
                     const isSharedWithMe = partyProfile && party.party_profile_id !== partyProfile.id
+                    const isLocal = localIds.has(party.id)
                     return (
                         <Card key={party.id} className="flex flex-col hover:border-emerald-500/30 transition-colors">
                             <CardHeader className="pb-4">
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="truncate pr-4">{party.name || 'Unnamed Event'}</CardTitle>
+                                    {isLocal && (
+                                        <span className="shrink-0 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                                            Local
+                                        </span>
+                                    )}
                                     {isSharedWithMe && (
                                         <span className="shrink-0 rounded-full bg-slate-800 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                                             Shared

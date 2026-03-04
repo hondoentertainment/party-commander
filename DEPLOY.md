@@ -7,6 +7,23 @@
 
 ---
 
+## 0. Supabase setup (required for "Create New Event")
+
+If "Initialize New Event" fails, run the database migrations:
+
+1. Go to **Supabase Dashboard** → your project → **SQL Editor**
+2. Run the migration files in order:
+   - `supabase/migrations/001_profiles.sql`
+   - `supabase/migrations/002_party_profiles_and_parties.sql`
+   - `supabase/migrations/003_party_collaborators.sql`
+   - `supabase/migrations/004_party_events.sql`
+
+Or use the Supabase CLI: `npx supabase db push` (with project linked).
+
+Without migrations, events are saved **locally** in your browser and will sync once the database is set up.
+
+---
+
 ## 1. GitHub Pages
 
 ### Configure repository secrets

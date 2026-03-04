@@ -15,7 +15,7 @@ import { PartyService, type PartyRow } from '../services/parties'
 import { EventService } from '../services/events'
 import { applyEngines } from './engines'
 import { defaultPartyState } from './defaults'
-import { getLastPartyId, loadState, saveState, setLastPartyId } from './storage'
+import { getLastPartyId, getLocalParties, addLocalParty, updateLocalParty, isLocalParty, loadState, saveState, setLastPartyId } from './storage'
 import type { PartyState } from './types'
 import type { PartyEvent } from './types'
 
@@ -161,13 +161,26 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
   const refreshParties = useCallback(async () => {
     if (!partyProfile) return
     const user = state.auth.user as { id: string } | null
-    const list = await PartyService.list(partyProfile.id, user?.id)
+    let list = await PartyService.list(partyProfile.id, user?.id)
+    const localForProfile = getLocalParties().filter((p) => p.party_profile_id === partyProfile.id)
+    const seen = new Set(list.map((p) => p.id))
+    for (const lp of localForProfile) {
+      if (!seen.has(lp.id)) {
+        seen.add(lp.id)
+        list = [lp as PartyRow, ...list]
+      }
+    }
+    list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     setParties(list)
   }, [partyProfile, state.auth.user])
 
   const switchParty = useCallback(
     async (id: string) => {
-      const row = await PartyService.get(id)
+      let row = await PartyService.get(id)
+      if (!row) {
+        const local = getLocalParties().find((p) => p.id === id)
+        if (local) row = local as PartyRow
+      }
       if (!row) return
       const stored = row.state as Partial<PartyState>
       const merged = mergeStoredWithDefaults(stored)
@@ -199,17 +212,39 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
   )
 
   const createParty = useCallback(
-    async (useCurrentState = true) => {
+    async (useCurrentState = true): Promise<string> => {
       if (!partyProfile) throw new Error('No party profile')
       const initialState = useCurrentState ? state : { ...defaultPartyState, core: { ...defaultPartyState.core, name: '' }, auth: state.auth }
-      const row = await PartyService.create(partyProfile.id, initialState)
-      setCurrentPartyId(row.id)
-      setLastPartyId(row.id)
-      setParties((prev) => [row, ...prev])
-      if (!useCurrentState) {
-        dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
+      try {
+        const row = await PartyService.create(partyProfile.id, initialState)
+        setCurrentPartyId(row.id)
+        setLastPartyId(row.id)
+        setParties((prev) => [row, ...prev])
+        if (!useCurrentState) {
+          dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
+        }
+        return row.id
+      } catch {
+        const id = uuid()
+        const now = new Date().toISOString()
+        const { auth: _a, ...stateForStore } = initialState
+        const row: PartyRow = {
+          id,
+          party_profile_id: partyProfile.id,
+          name: initialState.core.name || 'New Party',
+          state: stateForStore,
+          created_at: now,
+          updated_at: now,
+        }
+        addLocalParty(row)
+        setCurrentPartyId(id)
+        setLastPartyId(id)
+        setParties((prev) => [row, ...prev])
+        if (!useCurrentState) {
+          dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
+        }
+        return id
       }
-      return row.id
     },
     [partyProfile, state]
   )
@@ -253,14 +288,24 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return
         setPartyProfile(profile)
 
-        const list = await PartyService.list(profile.id, user.id)
+        let list = await PartyService.list(profile.id, user.id)
+        const localForProfile = getLocalParties().filter((p) => p.party_profile_id === profile.id)
+        const seen = new Set(list.map((p) => p.id))
+        for (const lp of localForProfile) {
+          if (!seen.has(lp.id)) {
+            seen.add(lp.id)
+            list = [lp as PartyRow, ...list]
+          }
+        }
+        list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
         if (cancelled) return
         setParties(list)
 
         const lastId = getLastPartyId()
         const toLoad = list.find((p) => p.id === lastId) ?? list[0]
         if (toLoad) {
-          const row = await PartyService.get(toLoad.id)
+          let row = await PartyService.get(toLoad.id)
+          if (!row && isLocalParty(toLoad.id)) row = toLoad
           if (cancelled || !row) return
           const stored = row.state as Partial<PartyState>
           const merged = mergeStoredWithDefaults(stored)
@@ -320,8 +365,13 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
-      PartyService.update(currentPartyId, state).catch(console.error)
-      EventService.sync(currentPartyId, state.events.items).catch(console.error)
+      if (isLocalParty(currentPartyId)) {
+        const { auth: _a, ...rest } = state
+        updateLocalParty(currentPartyId, rest)
+      } else {
+        PartyService.update(currentPartyId, state).catch(console.error)
+        EventService.sync(currentPartyId, state.events.items).catch(console.error)
+      }
       saveTimeoutRef.current = null
     }, 1000)
 

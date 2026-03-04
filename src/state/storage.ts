@@ -61,3 +61,47 @@ export function removePartyFromHiddenFromHome(partyId: string): void {
   const ids = getHiddenFromHomePartyIds().filter((id) => id !== partyId)
   localStorage.setItem(HIDDEN_FROM_HOME_KEY, JSON.stringify(ids))
 }
+
+const LOCAL_PARTIES_KEY = 'party-command-center-local-parties'
+
+export interface LocalPartyRow {
+  id: string
+  party_profile_id: string
+  name: string
+  state: unknown
+  created_at: string
+  updated_at: string
+}
+
+export function getLocalParties(): LocalPartyRow[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_PARTIES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export function saveLocalParties(rows: LocalPartyRow[]): void {
+  localStorage.setItem(LOCAL_PARTIES_KEY, JSON.stringify(rows))
+}
+
+export function addLocalParty(row: LocalPartyRow): void {
+  const rows = getLocalParties().filter((r) => r.id !== row.id)
+  rows.unshift(row)
+  saveLocalParties(rows)
+}
+
+export function updateLocalParty(partyId: string, state: unknown): void {
+  const rows = getLocalParties()
+  const idx = rows.findIndex((r) => r.id === partyId)
+  if (idx < 0) return
+  rows[idx] = { ...rows[idx], state, updated_at: new Date().toISOString() }
+  saveLocalParties(rows)
+}
+
+export function isLocalParty(partyId: string): boolean {
+  return getLocalParties().some((p) => p.id === partyId)
+}
