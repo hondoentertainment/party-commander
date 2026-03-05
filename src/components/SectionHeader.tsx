@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+
 interface SectionHeaderProps {
   title: string
   subtitle?: string
@@ -6,12 +8,23 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, subtitle, eyebrow }: SectionHeaderProps) {
   return (
-    <div className="mb-6">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="mb-6"
+    >
       {eyebrow ? (
-        <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/70">{eyebrow}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400/60">
+          {eyebrow}
+        </p>
       ) : null}
-      <h3 className="mt-2 text-2xl font-semibold text-white">{title}</h3>
-      {subtitle ? <p className="text-sm text-slate-300">{subtitle}</p> : null}
-    </div>
+      <h3 className="mt-1.5 text-2xl font-bold tracking-tight text-white">
+        {title}
+      </h3>
+      {subtitle ? (
+        <p className="mt-0.5 text-sm font-medium text-slate-500">{subtitle}</p>
+      ) : null}
+    </motion.div>
   )
 }

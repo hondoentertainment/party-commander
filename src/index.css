@@ -5,21 +5,19 @@
   line-height: 1.5;
   font-weight: 400;
   color: #f8fafc;
-  /* Lighter slate for better contrast */
   background-color: #020617;
-  /* Deeper midnight background */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
 
-  /* Midnight Sapphire v2 Tokens */
+  /* Design tokens */
   --ms-bg: #020617;
-  --ms-card: rgba(15, 23, 42, 0.6);
-  --ms-border: rgba(255, 255, 255, 0.05);
-  --ms-glow-primary: rgba(16, 185, 129, 0.2);
-  --ms-glow-secondary: rgba(59, 130, 246, 0.15);
+  --ms-card: rgba(255, 255, 255, 0.02);
+  --ms-border: rgba(255, 255, 255, 0.06);
+  --ms-glow-primary: rgba(16, 185, 129, 0.12);
+  --ms-glow-secondary: rgba(59, 130, 246, 0.08);
 }
 
 * {
@@ -35,44 +33,54 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 100% 0%, var(--ms-glow-primary), transparent 40%),
-    radial-gradient(circle at 0% 100%, var(--ms-glow-secondary), transparent 40%),
+    radial-gradient(ellipse 80% 60% at 100% 0%, var(--ms-glow-primary), transparent),
+    radial-gradient(ellipse 80% 60% at 0% 100%, var(--ms-glow-secondary), transparent),
     var(--ms-bg);
   background-attachment: fixed;
 }
 
 ::selection {
-  background: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.25);
 }
 
-/* Premium Scrollbar Styling */
+/* Scrollbar — minimal */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--ms-bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2));
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  border: 2px solid var(--ms-bg);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.4), rgba(59, 130, 246, 0.4));
+  background: rgba(255, 255, 255, 0.15);
 }
 
+/* Sidebar scrollbar — even more subtle */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+/* Ambient glow effects */
 .glow-orb {
   position: absolute;
   inset: -20% -10% auto auto;
   height: 400px;
   width: 400px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.15), transparent 70%);
-  filter: blur(40px);
-  opacity: 0.5;
-  animation: floatGlow 12s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.08), transparent 70%);
+  filter: blur(60px);
+  opacity: 0.6;
+  animation: floatGlow 15s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
@@ -82,29 +90,48 @@ body {
   inset: auto auto -40% -20%;
   height: 500px;
   width: 500px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 70%);
-  filter: blur(50px);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.06), transparent 70%);
+  filter: blur(60px);
   opacity: 0.4;
-  animation: floatGlow 15s ease-in-out infinite reverse;
+  animation: floatGlow 18s ease-in-out infinite reverse;
   pointer-events: none;
   z-index: 0;
 }
 
 @keyframes floatGlow {
-
   0%,
   100% {
     transform: translate3d(0, 0, 0) scale(1);
   }
-
   50% {
-    transform: translate3d(20px, -30px, 0) scale(1.1);
+    transform: translate3d(15px, -20px, 0) scale(1.05);
   }
 }
 
+/* Glass morphism (legacy compat for non-Card components) */
 .glass-morphism {
   background: var(--ms-card);
   backdrop-filter: blur(16px);
   border: 1px solid var(--ms-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Focus visible — consistent across all interactives */
+:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.4);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for interactive elements */
+a, button, input, select, textarea {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition-duration: 200ms;
+}
+
+/* Mobile safe area padding for bottom nav */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
