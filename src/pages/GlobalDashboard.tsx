@@ -14,7 +14,7 @@ export function GlobalDashboard() {
     const [createError, setCreateError] = useState<string | null>(null)
 
     const handleCreate = async () => {
-        if (!partyProfile || creating) return
+        if (creating) return
         setCreating(true)
         setCreateError(null)
         try {
@@ -34,7 +34,7 @@ export function GlobalDashboard() {
         }
     }
 
-    const canCreate = partyProfile && !partyLoading && !creating
+    const canCreate = !partyLoading && !creating
     const profileFailed = !partyLoading && !partyProfile && state.auth.user
     const localIds = new Set(getLocalParties().map((p) => p.id))
     const hasLocalParties = partyProfile && parties.some((p) => localIds.has(p.id))
