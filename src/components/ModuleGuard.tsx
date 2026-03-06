@@ -7,11 +7,16 @@ const pathToModuleId = (path: string): ModuleId | null => {
   return mod?.id ?? null
 }
 
+const normalizeModulePath = (pathname: string): string => {
+  const eventScopedPath = pathname.replace(/^\/event\/[^/]+/, '')
+  return eventScopedPath || '/'
+}
+
 export function ModuleGuard() {
   const { state } = useParty()
   const { pathname } = useLocation()
 
-  const moduleId = pathToModuleId(pathname)
+  const moduleId = pathToModuleId(normalizeModulePath(pathname))
   if (!moduleId) return <Outlet />
 
   const enabled = state.admin.modules[moduleId] !== false

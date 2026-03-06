@@ -165,15 +165,22 @@ export function Dashboard() {
                     </p>
                   )}
                 </div>
-                {nextEvent?.link && (
-                  <Button
-                    variant="outline"
-                    className="mt-6 w-full rounded-xl"
-                    onClick={() => window.open(nextEvent.link, '_blank')}
-                  >
-                    Open Event Protocol
-                  </Button>
-                )}
+                <div className="mt-6 flex flex-col gap-2">
+                  {nextEvent?.link && (
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      onClick={() => window.open(nextEvent.link, '_blank')}
+                    >
+                      Open Event Protocol
+                    </Button>
+                  )}
+                  <Link to={`/event/${eventId}/events`}>
+                    <Button variant="outline" className="w-full rounded-xl" size="sm">
+                      {state.events.items.length === 0 ? 'Add your first event' : 'Manage events'}
+                    </Button>
+                  </Link>
+                </div>
               </Card>
             </AnimatedItem>
 

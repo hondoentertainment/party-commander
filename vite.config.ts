@@ -10,6 +10,28 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     plugins: [react(), tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const normalizedId = id.replace(/\\/g, '/')
+
+            if (normalizedId.includes('/src/pages/ModulePages.tsx')) {
+              return 'module-pages'
+            }
+
+            if (!normalizedId.includes('/node_modules/')) return undefined
+            if (normalizedId.includes('/react/') || normalizedId.includes('/react-dom/')) return 'react-vendor'
+            if (normalizedId.includes('/react-router/')) return 'router-vendor'
+            if (normalizedId.includes('/@supabase/')) return 'supabase-vendor'
+            if (normalizedId.includes('/framer-motion/')) return 'motion-vendor'
+            if (normalizedId.includes('/lucide-react/')) return 'icons-vendor'
+            if (normalizedId.includes('/date-fns/')) return 'date-vendor'
+            return 'vendor'
+          },
+        },
+      },
+    },
     test: {
       globals: true,
       environment: 'jsdom',

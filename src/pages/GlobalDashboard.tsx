@@ -4,8 +4,8 @@ import { motion } from 'framer-motion'
 import { Plus, Sparkles, Loader2, Zap, PartyPopper } from 'lucide-react'
 import { useParty } from '../state/PartyContext'
 import { getLocalParties } from '../state/storage'
-import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { SectionHeader } from '../components/SectionHeader'
 import { AnimatedList, AnimatedItem } from '../components/ui/AnimatedList'
@@ -94,37 +94,34 @@ export function GlobalDashboard() {
           const isLocal = localIds.has(party.id)
           return (
             <AnimatedItem key={party.id}>
-              <Card className="flex h-full flex-col">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="truncate pr-2">
-                      {party.name || 'Unnamed Event'}
-                    </CardTitle>
-                    <div className="flex shrink-0 gap-1.5">
-                      {isLocal && <Badge variant="amber">Local</Badge>}
-                      {isSharedWithMe && <Badge variant="slate">Shared</Badge>}
+              <Link to={`/event/${party.id}`} className="block h-full">
+                <Card className="group flex h-full flex-col transition-colors hover:border-emerald-500/20">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="truncate pr-2">
+                        {party.name || 'Unnamed Event'}
+                      </CardTitle>
+                      <div className="flex shrink-0 gap-1.5">
+                        {isLocal && <Badge variant="amber">Local</Badge>}
+                        {isSharedWithMe && <Badge variant="slate">Shared</Badge>}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    Last updated:{' '}
-                    {new Date(party.updated_at).toLocaleDateString()}
-                  </p>
-                </CardHeader>
-                <div className="mt-auto pt-2">
-                  <Link to={`/event/${party.id}`}>
-                    <Button
-                      className="w-full justify-between"
-                      variant="outline"
-                    >
+                    <p className="text-sm text-slate-500">
+                      Last updated:{' '}
+                      {new Date(party.updated_at).toLocaleDateString()}
+                    </p>
+                  </CardHeader>
+                  <div className="mt-auto pt-2">
+                    <span className="inline-flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-200 transition group-hover:border-emerald-500/20 group-hover:bg-emerald-500/10 group-hover:text-white">
                       <span className="flex items-center gap-2">
                         <Zap size={14} className="text-emerald-400" />
                         Enter Protocol
                       </span>
-                      <Sparkles className="size-4 text-slate-500 transition-colors group-hover:text-emerald-400" />
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
+                      <Sparkles className="size-4 text-slate-500 transition-colors group-hover:text-emerald-300" />
+                    </span>
+                  </div>
+                </Card>
+              </Link>
             </AnimatedItem>
           )
         })}

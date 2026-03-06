@@ -540,7 +540,7 @@ const DEFAULT_LEADS = [
 ] as const
 
 export function EventsPage() {
-  const { state, dispatch } = useParty()
+  const { state, dispatch, currentPartyId, parties } = useParty()
   const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
   const [copiedEventId, setCopiedEventId] = useState<string | null>(null)
   const [showActiveOnly, setShowActiveOnly] = useState(true)
@@ -627,6 +627,30 @@ export function EventsPage() {
   const copyPartyMenuToEvent = (targetEventId: string) => {
     const menuItems = state.menu.items.map((m) => ({ ...m, id: uuid() }))
     updateEvent(targetEventId, { menuItems })
+  }
+
+  const needsParty = !currentPartyId
+
+  if (needsParty) {
+    return (
+      <div className="space-y-6 pb-20 md:pb-0">
+        <h3 className="text-2xl font-semibold text-white">Events</h3>
+        <p className="text-sm text-slate-300">Add upcoming events and keep an archive.</p>
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <span className="text-sm text-amber-200">
+            {parties.length > 0
+              ? 'Select a party from the home page to manage its events.'
+              : 'Create your first party from the home page to get started.'}
+          </span>
+          <Link
+            to="/"
+            className="shrink-0 rounded-xl bg-amber-500/20 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-500/30 transition-colors"
+          >
+            Go to Home
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

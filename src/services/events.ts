@@ -26,6 +26,10 @@ function rowToEvent(row: PartyEventRow): PartyEvent {
   }
 }
 
+function quotePostgrestInValue(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}
+
 export const EventService = {
   async listByParty(partyId: string): Promise<PartyEvent[]> {
     const { data, error } = await supabase
@@ -58,13 +62,19 @@ export const EventService = {
       updated_at: now,
     }))
 
+    const { error: upsertError } = await supabase
+      .from('party_events')
+      .upsert(rows, { onConflict: 'id' })
+    if (upsertError) throw upsertError
+
+    const keepIds = items.map((item) => item.id)
+    const quotedIds = keepIds.map(quotePostgrestInValue).join(',')
+
     const { error: deleteError } = await supabase
       .from('party_events')
       .delete()
       .eq('party_id', partyId)
+      .not('id', 'in', `(${quotedIds})`)
     if (deleteError) throw deleteError
-
-    const { error: insertError } = await supabase.from('party_events').insert(rows)
-    if (insertError) throw insertError
   },
 }

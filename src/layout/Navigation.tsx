@@ -42,15 +42,25 @@ function NavItem({
   onClick?: () => void
 }) {
   const { eventId } = useParams()
+  const { currentPartyId } = useParty()
   const Icon = item.icon
-  const isGlobal =
-    item.to === '/admin' || item.to === '/profile' || item.to === '/events'
+  const isGlobal = item.to === '/admin' || item.to === '/profile'
+  const activePartyId = eventId ?? currentPartyId
+  const homePath = eventId ? `/event/${eventId}` : '/'
+  // Events: use /event/:id/events when a party is active, else /events (global fallback)
+  const eventsPath = activePartyId ? `/event/${activePartyId}/events` : '/events'
   const toPath = isGlobal
     ? item.to
-    : eventId
-      ? `/event/${eventId}${item.to === '/' ? '' : item.to}`
-      : item.to
-  const match = useMatch({ path: toPath, end: item.to === '/' })
+    : item.id === 'home'
+      ? homePath
+    : item.id === 'events'
+      ? eventsPath
+      : activePartyId
+        ? `/event/${activePartyId}${item.to === '/' ? '' : item.to}`
+        : item.to
+  const matchDefault = useMatch({ path: toPath, end: item.to === '/' })
+  const matchEvents = useMatch({ path: '/event/:eventId/events', end: true })
+  const match = matchDefault || (item.id === 'events' && matchEvents)
 
   return (
     <NavLink
@@ -215,11 +225,12 @@ function BottomNavigation({
 }
 
 export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
-  const { state } = useParty()
+  const { state, currentPartyId } = useParty()
   const isAdmin = isAdminEmail(state.auth.user?.email)
+  const activePartyId = currentPartyId
   const navItems = MODULES.filter((m) => {
-    if (m.id === 'admin')
-      return isAdmin && isModuleEnabled(state.admin.modules, m.id)
+    if (m.id === 'admin') return isAdmin && isModuleEnabled(state.admin.modules, m.id)
+    if (!activePartyId && !['home', 'events'].includes(m.id)) return false
     return isModuleEnabled(state.admin.modules, m.id)
   })
 
