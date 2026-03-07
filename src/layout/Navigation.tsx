@@ -226,8 +226,9 @@ function BottomNavigation({
 
 export function Navigation({ layout }: { layout: 'sidebar' | 'bottom' }) {
   const { state, currentPartyId } = useParty()
+  const { eventId } = useParams()
   const isAdmin = isAdminEmail(state.auth.user?.email)
-  const activePartyId = currentPartyId
+  const activePartyId = eventId ?? currentPartyId
   const navItems = MODULES.filter((m) => {
     if (m.id === 'admin') return isAdmin && isModuleEnabled(state.admin.modules, m.id)
     if (!activePartyId && !['home', 'events'].includes(m.id)) return false

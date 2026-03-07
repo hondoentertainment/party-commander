@@ -1437,7 +1437,7 @@ export function DrinksPage() {
   }
 
   const resetDrinkOverride = (drinkId: string) => {
-    const { [drinkId]: _, ...rest } = drinkOverrides
+    const { [drinkId]: _removed, ...rest } = drinkOverrides
     dispatch({ type: 'update_drinks', payload: { drinkOverrides: rest } })
   }
 
@@ -1462,7 +1462,7 @@ export function DrinksPage() {
   const updateBaseItem = (key: ShoppingListBaseKey, text: string, resetIfEmpty = false) => {
     const val = text.trim()
     if (resetIfEmpty && !val) {
-      const { [key]: _, ...rest } = state.drinks.shoppingListOverrides ?? {}
+      const { [key]: _removed, ...rest } = state.drinks.shoppingListOverrides ?? {}
       dispatch({
         type: 'update_drinks',
         payload: { shoppingListOverrides: rest },
@@ -2647,13 +2647,13 @@ export function MusicPage() {
         <div className="relative z-10 mt-6 flex items-center gap-6">
           <div className="relative size-24 shrink-0 overflow-hidden rounded-2xl bg-black/40 ring-1 ring-white/10">
             <div className="absolute inset-x-0 bottom-0 flex h-16 items-center justify-center gap-1.5 p-4">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {[40, 70, 55, 80, 35].map((h, i) => (
                 <div
                   key={i}
                   className="w-1 rounded-full bg-emerald-500/60"
                   style={{
-                    height: `${20 + Math.random() * 60}%`,
-                    animation: `pulseHeight ${0.5 + Math.random() * 1}s ease-in-out infinite alternate`,
+                    height: `${h}%`,
+                    animation: `pulseHeight ${0.6 + i * 0.2}s ease-in-out infinite alternate`,
                   }}
                 />
               ))}

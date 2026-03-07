@@ -284,7 +284,8 @@ export interface PartyState {
   photoVideo: PhotoVideoState
   admin: AdminState
   auth: {
-    user: any | null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    user: any
     initialized: boolean
   }
 }

@@ -68,6 +68,8 @@ describe('BudgetPage confirmation dialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
 
     expect(screen.getByDisplayValue('Keep Me')).toBeInTheDocument()
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    })
   })
 })

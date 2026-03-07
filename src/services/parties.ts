@@ -12,7 +12,7 @@ export interface PartyRow {
 
 /** Omit auth from state when storing (restored from session on load) */
 function stateForStorage(state: PartyState): Omit<PartyState, 'auth'> {
-  const { auth: _auth, ...rest } = state
+  const { auth: _omitAuth, ...rest } = state
   return rest
 }
 
