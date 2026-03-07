@@ -192,8 +192,11 @@ export interface LiveState {
     cups: boolean
     mixers: boolean
     trash: boolean
+    napkins: boolean
+    bathroom: boolean
   }
   quickNotes: string[]
+  guestEstimate: number
 }
 
 export interface PostPartyState {

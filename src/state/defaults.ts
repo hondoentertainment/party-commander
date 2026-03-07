@@ -138,8 +138,11 @@ export const defaultPartyState: PartyState = {
       cups: false,
       mixers: false,
       trash: false,
+      napkins: false,
+      bathroom: false,
     },
     quickNotes: [],
+    guestEstimate: 0,
   },
   postParty: {
     cleanupChecklist: [],

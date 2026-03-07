@@ -157,6 +157,40 @@ export function BudgetPage() {
         </div>
       </Card>
 
+      {totalSpent > 0 && (() => {
+        const categoryTotals = state.budget.lineItems.reduce<Record<string, number>>((acc, item) => {
+          acc[item.category] = (acc[item.category] || 0) + item.amount
+          return acc
+        }, {})
+        if (decorTotal > 0) categoryTotals['decor'] = (categoryTotals['decor'] || 0) + decorTotal
+        const categoryColors: Record<string, string> = {
+          decor: 'bg-purple-500', food: 'bg-amber-500', drinks: 'bg-cyan-500',
+          venue: 'bg-blue-500', supplies: 'bg-emerald-500', other: 'bg-slate-400',
+        }
+        const sorted = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a)
+        return (
+          <Card>
+            <CardTitle>Spending by Category</CardTitle>
+            <div className="mt-4 space-y-3">
+              {sorted.map(([cat, amount]) => (
+                <div key={cat}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="capitalize text-slate-300">{cat}</span>
+                    <span className="font-semibold text-white">${amount.toFixed(2)}</span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className={cn('h-full rounded-full transition-all', categoryColors[cat] || 'bg-slate-400')}
+                      style={{ width: `${Math.min(100, (amount / totalSpent) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )
+      })()}
+
       <Card>
         <CardTitle>Add line item</CardTitle>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -312,15 +346,66 @@ export function PlanPage() {
     dispatch({ type: 'update_core', payload: { customTheme } })
   }
 
+  const themeDescriptions: Record<Theme, string> = {
+    Classic: 'Timeless cocktail party — elegant drinks, ambient playlists, sophisticated decor.',
+    Rooftop: 'Sky-high vibes — sunset spritzers, chill beats, panoramic views.',
+    Tropical: 'Island escape — fruity cocktails, steel drum rhythms, lush greenery.',
+    Disco: 'Retro glam — sparkle martinis, funk & disco, mirror balls and neon.',
+    'Game Night': 'Competitive fun — citrus punch, upbeat music, board games and trivia.',
+    Cozy: 'Intimate gathering — spiced mules, acoustic sets, warm lighting and blankets.',
+    Minimal: 'Less is more — simple highballs, lo-fi beats, clean lines and neutrals.',
+    Custom: 'Your vision — define your own theme, drinks, and atmosphere.',
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Plan</h3>
       <p className="text-sm text-slate-300">
-        Pick a party concept for your event. This sets the vibe for drinks and decor.
+        Set your party details and pick a concept that drives drinks and decor.
       </p>
 
       <Card>
+        <CardTitle>Party Details</CardTitle>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-sm text-slate-300">
+            Party name
+            <Input
+              value={state.core.name}
+              onChange={(e) =>
+                dispatch({ type: 'update_core', payload: { name: e.target.value } })
+              }
+              className="mt-2"
+              placeholder="e.g. Summer Rooftop Bash"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Date & time
+            <Input
+              type="datetime-local"
+              value={state.core.date}
+              onChange={(e) =>
+                dispatch({ type: 'update_core', payload: { date: e.target.value } })
+              }
+              className="mt-2"
+            />
+          </label>
+          <label className="md:col-span-2 text-sm text-slate-300">
+            Location
+            <Input
+              value={state.core.location}
+              onChange={(e) =>
+                dispatch({ type: 'update_core', payload: { location: e.target.value } })
+              }
+              className="mt-2"
+              placeholder="e.g. 123 Main St, Apt 4B — Rooftop"
+            />
+          </label>
+        </div>
+      </Card>
+
+      <Card>
         <CardTitle>Party concepts</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Sets the vibe for auto-generated drinks and decor suggestions.</p>
         <ul className="mt-4 space-y-2">
           {PARTY_CONCEPTS.map((concept) => (
             <li key={concept}>
@@ -328,13 +413,24 @@ export function PlanPage() {
                 type="button"
                 onClick={() => setTheme(concept)}
                 className={cn(
-                  'w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition',
+                  'w-full rounded-xl px-4 py-3 text-left transition',
                   state.core.theme === concept
-                    ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
-                    : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                    ? 'bg-emerald-500/20 ring-1 ring-emerald-500/30'
+                    : 'bg-white/5 hover:bg-white/10'
                 )}
               >
-                {concept}
+                <span className={cn(
+                  'text-sm font-medium',
+                  state.core.theme === concept ? 'text-emerald-400' : 'text-slate-300 hover:text-white'
+                )}>
+                  {concept}
+                </span>
+                <p className={cn(
+                  'mt-0.5 text-xs',
+                  state.core.theme === concept ? 'text-emerald-400/70' : 'text-slate-500'
+                )}>
+                  {themeDescriptions[concept]}
+                </p>
               </button>
             </li>
           ))}
@@ -498,6 +594,28 @@ export function InvitesPage() {
                 </Button>
               </div>
             </label>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Invite Readiness</CardTitle>
+        <div className="mt-4 space-y-2">
+          {[
+            { label: 'Party name', ready: !!state.core.name && state.core.name !== 'My Party' },
+            { label: 'Date set', ready: !!state.core.date },
+            { label: 'Location set', ready: !!state.core.location },
+            { label: 'RSVP link', ready: !!state.invites.partifulLink },
+            { label: 'Guest count', ready: state.invites.guestCount > 0 },
+            { label: 'Entry instructions', ready: !!state.entry.instructions || !!state.entry.butterflyLink },
+          ].map(({ label, ready }) => (
+            <div key={label} className="flex items-center gap-2 text-sm">
+              <span className={cn(
+                'size-2 shrink-0 rounded-full',
+                ready ? 'bg-emerald-500' : 'bg-slate-600'
+              )} />
+              <span className={ready ? 'text-slate-300' : 'text-slate-500'}>{label}</span>
+            </div>
           ))}
         </div>
       </Card>
@@ -2043,12 +2161,21 @@ export function DecorPage() {
   )
 }
 
+const CLEANING_PHASES = [
+  { key: 'before' as const, label: 'Before Party', description: 'Prep tasks to complete before guests arrive.' },
+  { key: 'during' as const, label: 'During Party', description: 'Maintenance tasks while the party is running.' },
+  { key: 'after' as const, label: 'After Party', description: 'Post-party cleanup and restoration tasks.' },
+]
+
 export function CleaningPage() {
   const { state, dispatch } = useParty()
-  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
+  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string; source: 'extra' | 'checklist' } | null>(null)
   const [extraName, setExtraName] = useState('')
   const [extraQty, setExtraQty] = useState(1)
+  const [taskLabel, setTaskLabel] = useState('')
+  const [taskPhase, setTaskPhase] = useState<'before' | 'during' | 'after'>('before')
   const bathroomExtras = state.cleaning.bathroomExtras ?? []
+  const checklists = state.cleaning.checklists ?? []
 
   const toggleBathroomSupply = (id: string) => {
     dispatch({
@@ -2098,10 +2225,146 @@ export function CleaningPage() {
     })
   }
 
+  const addChecklistTask = () => {
+    if (!taskLabel.trim()) return
+    dispatch({
+      type: 'update_cleaning',
+      payload: {
+        checklists: [
+          ...checklists,
+          { id: uuid(), label: taskLabel.trim(), phase: taskPhase, status: 'not_started' as const },
+        ],
+      },
+    })
+    setTaskLabel('')
+  }
+
+  const toggleChecklistTask = (id: string) => {
+    dispatch({
+      type: 'update_cleaning',
+      payload: {
+        checklists: checklists.map((item) =>
+          item.id === id
+            ? { ...item, status: item.status === 'done' ? 'not_started' : 'done' }
+            : item,
+        ),
+      },
+    })
+  }
+
+  const removeChecklistTask = (id: string) => {
+    dispatch({
+      type: 'update_cleaning',
+      payload: { checklists: checklists.filter((i) => i.id !== id) },
+    })
+  }
+
+  const phaseProgress = (phase: 'before' | 'during' | 'after') => {
+    const items = checklists.filter((c) => c.phase === phase)
+    if (items.length === 0) return null
+    const done = items.filter((c) => c.status === 'done').length
+    return { done, total: items.length }
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-2xl font-semibold text-white">Cleaning & Bathroom</h3>
-      <p className="text-sm text-slate-300">Bathroom essentials checklist. Add more items below if needed.</p>
+      <h3 className="text-2xl font-semibold text-white">Cleaning & Supplies</h3>
+      <p className="text-sm text-slate-300">Manage cleaning tasks by phase and track bathroom essentials.</p>
+
+      {CLEANING_PHASES.map(({ key, label, description }) => {
+        const items = checklists.filter((c) => c.phase === key)
+        const progress = phaseProgress(key)
+        return (
+          <Card key={key}>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>{label}</CardTitle>
+                <p className="mt-0.5 text-xs text-slate-400">{description}</p>
+              </div>
+              {progress && (
+                <span className={cn(
+                  'rounded-full px-2.5 py-0.5 text-xs font-bold',
+                  progress.done === progress.total
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-white/10 text-slate-400'
+                )}>
+                  {progress.done}/{progress.total}
+                </span>
+              )}
+            </div>
+            {items.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {items.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-2">
+                    <label
+                      className={cn(
+                        'flex flex-1 cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors',
+                        item.status === 'done'
+                          ? 'bg-emerald-500/20 text-emerald-200'
+                          : 'bg-white/5 text-slate-300 hover:bg-white/10',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.status === 'done'}
+                        onChange={() => toggleChecklistTask(item.id)}
+                        className="size-4 shrink-0 rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-emerald-500/50"
+                        aria-label={item.label}
+                      />
+                      <span className={cn(item.status === 'done' && 'line-through opacity-80')}>
+                        {item.label}
+                      </span>
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-slate-400 hover:text-rose-400"
+                      onClick={() => setConfirmingRemove({ id: item.id, name: item.label, source: 'checklist' })}
+                      aria-label={`Remove ${item.label}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {items.length === 0 && (
+              <p className="mt-4 text-xs text-slate-500">No tasks yet. Add one below.</p>
+            )}
+          </Card>
+        )
+      })}
+
+      <Card>
+        <CardTitle>Add cleaning task</CardTitle>
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <label className="flex-1 text-sm text-slate-300">
+            Task
+            <Input
+              value={taskLabel}
+              onChange={(e) => setTaskLabel(e.target.value)}
+              className="mt-1"
+              placeholder="e.g. Vacuum living room"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Phase
+            <Select
+              value={taskPhase}
+              onChange={(e) => setTaskPhase(e.target.value as 'before' | 'during' | 'after')}
+              className="mt-1"
+            >
+              <option value="before">Before</option>
+              <option value="during">During</option>
+              <option value="after">After</option>
+            </Select>
+          </label>
+          <Button type="button" size="sm" onClick={addChecklistTask} disabled={!taskLabel.trim()}>
+            Add task
+          </Button>
+        </div>
+      </Card>
 
       <Card>
         <CardTitle>Bathroom essentials</CardTitle>
@@ -2158,7 +2421,7 @@ export function CleaningPage() {
                       variant="ghost"
                       size="sm"
                       className="shrink-0 text-slate-400 hover:text-rose-400"
-                      onClick={() => setConfirmingRemove({ id: item.id, name: item.name })}
+                      onClick={() => setConfirmingRemove({ id: item.id, name: item.name, source: 'extra' })}
                       aria-label={`Remove ${item.name}`}
                     >
                       <Trash2 className="size-4" />
@@ -2196,11 +2459,15 @@ export function CleaningPage() {
       <ConfirmDialog
         open={!!confirmingRemove}
         onClose={() => setConfirmingRemove(null)}
-        onConfirm={() => { if (confirmingRemove) removeBathroomExtra(confirmingRemove.id) }}
+        onConfirm={() => {
+          if (!confirmingRemove) return
+          if (confirmingRemove.source === 'extra') removeBathroomExtra(confirmingRemove.id)
+          else removeChecklistTask(confirmingRemove.id)
+        }}
         title="Remove item"
         description={
           confirmingRemove
-            ? `Remove "${confirmingRemove.name}" from checklist? This cannot be undone.`
+            ? `Remove "${confirmingRemove.name}"? This cannot be undone.`
             : ''
         }
       />
@@ -2681,13 +2948,26 @@ export function MusicPage() {
       <Card>
         <CardTitle>Master Playlist Link</CardTitle>
         <div className="mt-4 space-y-4">
-          <Input
-            value={state.music.mainLink}
-            onChange={(event) =>
-              dispatch({ type: 'update_music', payload: { mainLink: event.target.value } })
-            }
-            placeholder="https://open.spotify.com/..."
-          />
+          <div className="flex gap-2">
+            <Input
+              value={state.music.mainLink}
+              onChange={(event) =>
+                dispatch({ type: 'update_music', payload: { mainLink: event.target.value } })
+              }
+              placeholder="https://open.spotify.com/..."
+              className="flex-1"
+            />
+            {state.music.mainLink && (
+              <a
+                href={state.music.mainLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+              >
+                Open ↗
+              </a>
+            )}
+          </div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Link your master event playlist for one-tap access.
           </p>
@@ -2696,23 +2976,43 @@ export function MusicPage() {
 
       <Card>
         <CardTitle>Phase playlists</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Set the sonic arc of your party from start to finish.</p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {(['pregame', 'arrival', 'peak', 'late', 'windDown'] as const).map((phase) => (
-            <label key={phase} className="text-sm text-slate-300">
-              {phase}
-              <Input
-                value={state.music.playlists[phase]}
-                onChange={(event) =>
-                  dispatch({
-                    type: 'update_music',
-                    payload: {
-                      playlists: { ...state.music.playlists, [phase]: event.target.value },
-                    },
-                  })
-                }
-                className="mt-2"
-                placeholder="https://open.spotify.com/..."
-              />
+          {([
+            { key: 'pregame' as const, label: 'Pregame', desc: 'Chill vibes as you set up — lo-fi, ambient.' },
+            { key: 'arrival' as const, label: 'Arrival', desc: 'Upbeat welcome energy — guests trickling in.' },
+            { key: 'peak' as const, label: 'Peak', desc: 'Full energy — dance floor anthems, crowd favorites.' },
+            { key: 'late' as const, label: 'Late Night', desc: 'Deep cuts, house, after-hours grooves.' },
+            { key: 'windDown' as const, label: 'Wind Down', desc: 'Slow the tempo — mellow, acoustic, easy.' },
+          ]).map(({ key, label, desc }) => (
+            <label key={key} className="text-sm text-slate-300">
+              <span className="font-medium">{label}</span>
+              <span className="ml-2 text-xs text-slate-500">{desc}</span>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={state.music.playlists[key]}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'update_music',
+                      payload: {
+                        playlists: { ...state.music.playlists, [key]: event.target.value },
+                      },
+                    })
+                  }
+                  placeholder="https://open.spotify.com/..."
+                  className="flex-1"
+                />
+                {state.music.playlists[key] && (
+                  <a
+                    href={state.music.playlists[key]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex shrink-0 items-center rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-slate-400 transition hover:bg-white/10 hover:text-white"
+                  >
+                    ↗
+                  </a>
+                )}
+              </div>
             </label>
           ))}
         </div>
@@ -3177,6 +3477,10 @@ export function LivePage() {
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const [note, setNote] = useState('')
 
+  const alertEmoji: Record<string, string> = {
+    ice: '🧊', cups: '🥤', mixers: '🍹', trash: '🗑️', napkins: '🧻', bathroom: '🚽',
+  }
+
   const toggleAlert = (key: keyof typeof state.live.restockAlerts) => {
     dispatch({
       type: 'update_live',
@@ -3205,34 +3509,77 @@ export function LivePage() {
     })
   }
 
+  const activeAlerts = Object.values(state.live.restockAlerts).filter(Boolean).length
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Live Party Mode</h3>
       <p className="text-sm text-slate-300">One-tap controls for the night.</p>
-
-      <Card>
-        <CardTitle>Now playing</CardTitle>
-        <p className="mt-2 text-sm text-slate-300">
-          {state.music.mainLink ? state.music.mainLink : 'Add a main playlist link.'}
-        </p>
-      </Card>
 
       <Card className="border-emerald-500/10 bg-emerald-500/5">
         <div className="flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
             <Sparkles className="size-5 text-emerald-400" />
           </div>
-          <div>
+          <div className="flex-1">
             <CardTitle>Operational Snapshot</CardTitle>
-            <p className="text-xs text-slate-400">Active playlist: {state.music.mainLink ? 'Connected' : 'Disconnected'}</p>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+              <span>Playlist: {state.music.mainLink ? '🟢 Connected' : '🔴 Disconnected'}</span>
+              <span>Alerts: {activeAlerts > 0 ? `🔴 ${activeAlerts} active` : '🟢 Clear'}</span>
+              <span>Guests: ~{state.live.guestEstimate ?? state.invites.guestCount}</span>
+            </div>
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Now playing</CardTitle>
+        {state.music.mainLink ? (
+          <div className="mt-2 flex items-center gap-2">
+            <p className="flex-1 truncate text-sm text-slate-300">{state.music.mainLink}</p>
+            <a
+              href={state.music.mainLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+            >
+              Open ↗
+            </a>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-slate-500">Add a main playlist link in Music Hub.</p>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle>Guest Estimate</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Update the live headcount as guests arrive.</p>
+        <div className="mt-3 flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => dispatch({ type: 'update_live', payload: { guestEstimate: Math.max(0, (state.live.guestEstimate ?? 0) - 1) } })}
+          >
+            −
+          </Button>
+          <span className="min-w-[3rem] text-center text-2xl font-bold text-white">{state.live.guestEstimate ?? 0}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => dispatch({ type: 'update_live', payload: { guestEstimate: (state.live.guestEstimate ?? 0) + 1 } })}
+          >
+            +
+          </Button>
+          <span className="text-xs text-slate-500">RSVP: {state.invites.guestCount}</span>
         </div>
       </Card>
 
       <Card>
         <CardTitle>Operational Alerts</CardTitle>
         <p className="mt-2 text-sm text-slate-400">Tap to flag items that need immediate attention from the leads.</p>
-        <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
           {Object.entries(state.live.restockAlerts).map(([key, value]) => (
             <button
               key={key}
@@ -3248,10 +3595,7 @@ export function LivePage() {
                 'flex size-12 items-center justify-center rounded-2xl transition-all duration-300',
                 value ? 'bg-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'bg-black/40'
               )}>
-                {key === 'ice' && '🧊'}
-                {key === 'cups' && '🥤'}
-                {key === 'mixers' && '🍹'}
-                {key === 'trash' && '🗑️'}
+                {alertEmoji[key] || '⚠️'}
               </div>
               <span className="text-xs font-bold uppercase tracking-widest">{key}</span>
               {value && (
@@ -3270,6 +3614,7 @@ export function LivePage() {
             onChange={(event) => setNote(event.target.value)}
             className="flex-1"
             placeholder="Need more ice by 9 PM"
+            onKeyDown={(e) => { if (e.key === 'Enter') addNote() }}
           />
           <Button type="button" onClick={addNote}>
             Add
