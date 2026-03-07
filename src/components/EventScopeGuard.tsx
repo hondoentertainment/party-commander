@@ -5,26 +5,17 @@ import { useParty } from '../state/PartyContext'
 
 export function EventScopeGuard() {
     const { eventId } = useParams()
-    const { currentPartyId, switchParty, partyLoading, parties } = useParty()
+    const { currentPartyId, switchParty, partyLoading } = useParty()
     const navigate = useNavigate()
 
     useEffect(() => {
-        if (partyLoading || !eventId) return
+        if (partyLoading || !eventId || currentPartyId === eventId) return
 
-        const eventExists = parties.some((p) => p.id === eventId) || currentPartyId === eventId
-        if (!eventExists) {
-            // If the URL has an eventId that doesn't exist, boot them to home
+        switchParty(eventId).catch((err) => {
+            console.error('Failed to switch party on navigation:', err)
             navigate('/', { replace: true })
-            return
-        }
-
-        if (currentPartyId !== eventId) {
-            switchParty(eventId).catch((err) => {
-                console.error('Failed to switch party on navigation:', err)
-                navigate('/', { replace: true })
-            })
-        }
-    }, [eventId, currentPartyId, partyLoading, parties, switchParty, navigate])
+        })
+    }, [eventId, currentPartyId, partyLoading, switchParty, navigate])
 
     if (currentPartyId !== eventId) {
         return (

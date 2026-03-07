@@ -6,6 +6,7 @@ import { ModuleGuard } from './components/ModuleGuard'
 import { AdminGuard } from './components/AdminGuard'
 import { AuthGate } from './components/AuthGate'
 import { EventScopeGuard } from './components/EventScopeGuard'
+import { useParty } from './state/PartyContext'
 
 const AuthCallback = lazy(() => import('./pages/AuthCallback').then((module) => ({ default: module.AuthCallback })))
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then((module) => ({ default: module.ResetPassword })))
@@ -40,6 +41,16 @@ function RouteFallback() {
   )
 }
 
+function GlobalEventsEntry() {
+  const { currentPartyId } = useParty()
+
+  if (currentPartyId) {
+    return <Navigate to={`/event/${currentPartyId}/events`} replace />
+  }
+
+  return <EventsPage />
+}
+
 function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
@@ -54,7 +65,7 @@ function App() {
               <Route path="/" element={<GlobalDashboard />} />
               <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
               <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/events" element={<EventsPage />} />
+              <Route path="/events" element={<GlobalEventsEntry />} />
 
               {/* Event Scoped Routes */}
               <Route path="/event/:eventId" element={<EventScopeGuard />}>

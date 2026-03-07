@@ -1380,7 +1380,7 @@ type DrinksConfirming =
   | null
 
 export function DrinksPage() {
-  const { state, dispatch } = useParty()
+  const { state, dispatch, currentPartyId } = useParty()
   const [confirmingRemove, setConfirmingRemove] = useState<DrinksConfirming>(null)
   const [extraItem, setExtraItem] = useState('')
   const [qtyDraft, setQtyDraft] = useState({ name: '', quantity: 1 })
@@ -1793,7 +1793,7 @@ export function DrinksPage() {
             <p className="mt-2 text-sm font-medium text-white">
               {state.photoVideo.photos.length} photo{state.photoVideo.photos.length !== 1 ? 's' : ''} stored
             </p>
-            <Link to="/photo-video">
+            <Link to={currentPartyId ? `/event/${currentPartyId}/photo-video` : '/events'}>
               <Button variant="outline" size="sm" className="mt-2">
                 Open Photo Gallery
               </Button>

@@ -58,11 +58,11 @@ function PartyListItem({
     return (
         <li>
             <Link
-                to="/"
+                to={`/event/${p.id}`}
                 onClick={(e) => {
                     if (p.id !== currentPartyId) {
                         e.preventDefault()
-                        switchParty(p.id).then(() => navigate('/'))
+                        switchParty(p.id).then(() => navigate(`/event/${p.id}`))
                     }
                 }}
                 className="flex items-center gap-3 py-4 text-left transition hover:bg-white/5 -mx-2 px-2 rounded-xl"

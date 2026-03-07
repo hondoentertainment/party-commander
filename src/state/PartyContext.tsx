@@ -30,6 +30,32 @@ function normalizeEvents(items: PartyEvent[] | undefined): PartyEvent[] {
   })
 }
 
+function getLocalPartyOwnerKeys(profileId: string | null, userId: string | null): string[] {
+  return [profileId, userId ? `local:${userId}` : null, 'local'].filter(
+    (value): value is string => Boolean(value),
+  )
+}
+
+function getLocalPartiesForOwner(profileId: string | null, userId: string | null): PartyRow[] {
+  const ownerKeys = new Set(getLocalPartyOwnerKeys(profileId, userId))
+  return getLocalParties().filter((party) => ownerKeys.has(party.party_profile_id)) as PartyRow[]
+}
+
+function mergePartyLists(remote: PartyRow[], local: PartyRow[]): PartyRow[] {
+  const seen = new Set(remote.map((party) => party.id))
+  const merged = [...remote]
+  for (const party of local) {
+    if (!seen.has(party.id)) {
+      seen.add(party.id)
+      merged.unshift(party)
+    }
+  }
+  merged.sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  )
+  return merged
+}
+
 type PartyAction =
   | { type: 'set_state'; payload: PartyState }
   | { type: 'update_core'; payload: Partial<PartyState['core']> }
@@ -159,19 +185,14 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
   })
 
   const refreshParties = useCallback(async () => {
-    if (!partyProfile) return
     const user = state.auth.user as { id: string } | null
-    let list = await PartyService.list(partyProfile.id, user?.id)
-    const localForProfile = getLocalParties().filter((p) => p.party_profile_id === partyProfile.id)
-    const seen = new Set(list.map((p) => p.id))
-    for (const lp of localForProfile) {
-      if (!seen.has(lp.id)) {
-        seen.add(lp.id)
-        list = [lp as PartyRow, ...list]
-      }
+    const localParties = getLocalPartiesForOwner(partyProfile?.id ?? null, user?.id ?? null)
+    if (!partyProfile) {
+      setParties(localParties)
+      return
     }
-    list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-    setParties(list)
+    const remoteParties = await PartyService.list(partyProfile.id, user?.id)
+    setParties(mergePartyLists(remoteParties, localParties))
   }, [partyProfile, state.auth.user])
 
   const switchParty = useCallback(
@@ -181,7 +202,9 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
         const local = getLocalParties().find((p) => p.id === id)
         if (local) row = local as PartyRow
       }
-      if (!row) return
+      if (!row) {
+        throw new Error('Party not found')
+      }
       const stored = row.state as Partial<PartyState>
       const merged = mergeStoredWithDefaults(stored)
       let events = merged.events.items
@@ -207,14 +230,16 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       })
       setCurrentPartyId(id)
       setLastPartyId(id)
+      setParties((prev) => mergePartyLists(prev, [row]))
     },
     [state.auth]
   )
 
   const createParty = useCallback(
     async (useCurrentState = true): Promise<string> => {
+      const user = state.auth.user as { id: string } | null
       const initialState = useCurrentState ? state : { ...defaultPartyState, core: { ...defaultPartyState.core, name: '' }, auth: state.auth }
-      const profileId = partyProfile?.id ?? 'local'
+      const localOwnerKey = partyProfile?.id ?? (user?.id ? `local:${user.id}` : 'local')
 
       // Try Supabase first if we have a real profile
       if (partyProfile) {
@@ -222,12 +247,13 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
           const row = await PartyService.create(partyProfile.id, initialState)
           setCurrentPartyId(row.id)
           setLastPartyId(row.id)
-          setParties((prev) => [row, ...prev])
+          setParties((prev) => mergePartyLists(prev, [row]))
           if (!useCurrentState) {
             dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
           }
           return row.id
-        } catch {
+        } catch (error) {
+          console.error('Falling back to local party creation:', error)
           // Fall through to local creation
         }
       }
@@ -238,7 +264,7 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       const { auth: _a, ...stateForStore } = initialState
       const row: PartyRow = {
         id,
-        party_profile_id: profileId,
+        party_profile_id: localOwnerKey,
         name: initialState.core.name || 'New Party',
         state: stateForStore,
         created_at: now,
@@ -247,7 +273,7 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       addLocalParty(row)
       setCurrentPartyId(id)
       setLastPartyId(id)
-      setParties((prev) => [row, ...prev])
+      setParties((prev) => mergePartyLists(prev, [row]))
       if (!useCurrentState) {
         dispatch({ type: 'set_state', payload: { ...applyEngines(initialState), auth: state.auth } })
       }
@@ -295,16 +321,9 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return
         setPartyProfile(profile)
 
-        let list = await PartyService.list(profile.id, user.id)
-        const localForProfile = getLocalParties().filter((p) => p.party_profile_id === profile.id)
-        const seen = new Set(list.map((p) => p.id))
-        for (const lp of localForProfile) {
-          if (!seen.has(lp.id)) {
-            seen.add(lp.id)
-            list = [lp as PartyRow, ...list]
-          }
-        }
-        list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        const remoteParties = await PartyService.list(profile.id, user.id)
+        const localForProfile = getLocalPartiesForOwner(profile.id, user.id)
+        const list = mergePartyLists(remoteParties, localForProfile)
         if (cancelled) return
         setParties(list)
 
@@ -350,7 +369,32 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
           })
         }
       } catch (err) {
-        if (!cancelled) console.error('Failed to load party profile:', err)
+        if (!cancelled) {
+          console.error('Failed to load party profile:', err)
+          const localParties = getLocalPartiesForOwner(null, user.id)
+          setPartyProfile(null)
+          setParties(localParties)
+          const toLoad = localParties.find((party) => party.id === getLastPartyId()) ?? localParties[0]
+          if (toLoad) {
+            const stored = toLoad.state as Partial<PartyState>
+            const merged = mergeStoredWithDefaults(stored)
+            dispatch({
+              type: 'set_state',
+              payload: { ...merged, auth },
+            })
+            setCurrentPartyId(toLoad.id)
+            setLastPartyId(toLoad.id)
+          } else {
+            dispatch({
+              type: 'set_state',
+              payload: {
+                ...defaultPartyState,
+                core: { ...defaultPartyState.core, name: '' },
+                auth,
+              },
+            })
+          }
+        }
       } finally {
         if (!cancelled) setPartyLoading(false)
       }

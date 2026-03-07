@@ -32,7 +32,7 @@ export function InvitePage() {
       try {
         const partyId = await CollaboratorService.redeemInviteToken(token)
         setStatus('success')
-        navigate(`/?party=${partyId}`, { replace: true })
+        navigate(`/event/${partyId}`, { replace: true })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to join party')
         setStatus('error')
