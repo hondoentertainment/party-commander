@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { compareAsc, isAfter, parseISO } from 'date-fns'
 import { Link, useSearchParams, useParams } from 'react-router-dom'
@@ -14,6 +14,10 @@ import {
   Sparkles,
   MapPin,
   User,
+  Wand2,
+  DollarSign,
+  Users,
+  X,
 } from 'lucide-react'
 import { SectionHeader } from '../components/SectionHeader'
 import { Button } from '../components/ui/Button'
@@ -27,6 +31,7 @@ export function Dashboard() {
   const { eventId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const partyIdFromUrl = searchParams.get('party')
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
 
   useEffect(() => {
     if (!partyIdFromUrl || !switchParty) return
@@ -38,6 +43,18 @@ export function Dashboard() {
       })
       .catch(() => {})
   }, [partyIdFromUrl, switchParty])
+
+  const showWelcome = useMemo(
+    () => searchParams.get('welcome') === '1' && !welcomeDismissed,
+    [searchParams, welcomeDismissed],
+  )
+
+  const dismissWelcome = () => {
+    const next = new URLSearchParams(searchParams)
+    next.delete('welcome')
+    setSearchParams(next, { replace: true })
+    setWelcomeDismissed(true)
+  }
 
   const readiness = [
     {
@@ -126,6 +143,78 @@ export function Dashboard() {
             subtitle="Real-time preparation metrics and upcoming milestones."
             eyebrow="Overview"
           />
+
+          {showWelcome && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="overflow-hidden border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-white/[0.02] to-blue-500/10">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-emerald-300">
+                      <Sparkles className="size-3.5" />
+                      Welcome
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-semibold text-white">
+                        Your first event is ready.
+                      </h3>
+                      <p className="mt-2 max-w-2xl text-sm text-slate-300">
+                        Start with the essentials, then expand into the rest of the command center as your plan comes together.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <Link
+                        to={`/event/${eventId}/plan`}
+                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-emerald-500/20 hover:bg-white/[0.05]"
+                      >
+                        <div className="flex items-center gap-2 text-emerald-300">
+                          <Wand2 className="size-4" />
+                          <span className="text-sm font-semibold">Pick the vibe</span>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-400">
+                          Set the name, theme, and overall feel for the event.
+                        </p>
+                      </Link>
+                      <Link
+                        to={`/event/${eventId}/events`}
+                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-emerald-500/20 hover:bg-white/[0.05]"
+                      >
+                        <div className="flex items-center gap-2 text-emerald-300">
+                          <Users className="size-4" />
+                          <span className="text-sm font-semibold">Add event details</span>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-400">
+                          Lock in the date, location, and key details people need.
+                        </p>
+                      </Link>
+                      <Link
+                        to={`/event/${eventId}/budget`}
+                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-emerald-500/20 hover:bg-white/[0.05]"
+                      >
+                        <div className="flex items-center gap-2 text-emerald-300">
+                          <DollarSign className="size-4" />
+                          <span className="text-sm font-semibold">Set your budget</span>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-400">
+                          Create a spending guardrail before invites and shopping ramp up.
+                        </p>
+                      </Link>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={dismissWelcome}
+                    className="shrink-0 rounded-xl p-2 text-slate-500 transition hover:bg-white/5 hover:text-white"
+                    aria-label="Dismiss welcome panel"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
 
           <AnimatedList className="grid gap-6 md:grid-cols-2">
             {/* Next Event card */}

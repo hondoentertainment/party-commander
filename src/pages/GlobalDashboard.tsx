@@ -21,8 +21,9 @@ export function GlobalDashboard() {
     setCreating(true)
     setCreateError(null)
     try {
+      const isFirstParty = parties.length === 0
       const id = await createParty(false)
-      navigate(`/event/${id}`)
+      navigate(isFirstParty ? `/event/${id}?welcome=1` : `/event/${id}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create event'
       if (msg.includes('No party profile') || msg.includes('profile')) {

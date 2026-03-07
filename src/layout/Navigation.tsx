@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useMatch, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MODULES, type ModuleConfig } from '../config/modules'
+import { MODULES, type ModuleConfig, type ModuleId } from '../config/modules'
 import { useParty } from '../state/PartyContext'
 import { isAdminEmail } from '../utils/admin'
 import { cn } from '../components/ui/utils'
@@ -12,7 +12,7 @@ function isModuleEnabled(modules: Record<string, boolean>, id: string): boolean 
 }
 
 /** Group definitions for sidebar navigation */
-const SIDEBAR_GROUPS: { label: string; ids: string[] }[] = [
+const SIDEBAR_GROUPS: { label: string; ids: ModuleId[] }[] = [
   { label: '', ids: ['home'] },
   {
     label: 'Planning',
@@ -30,7 +30,7 @@ const SIDEBAR_GROUPS: { label: string; ids: string[] }[] = [
 ]
 
 /** Priority items for mobile bottom nav (the rest go in "More") */
-const MOBILE_PRIORITY_IDS = ['home', 'timeline', 'budget', 'invites', 'music']
+const MOBILE_PRIORITY_IDS: ModuleId[] = ['home', 'timeline', 'budget', 'invites', 'music']
 
 function NavItem({
   item,
@@ -82,7 +82,7 @@ function NavItem({
         aria-hidden
         className={cn(
           'transition-transform duration-200',
-          match && 'scale-110',
+          Boolean(match) && 'scale-110',
         )}
       />
       {layout === 'sidebar' ? (
