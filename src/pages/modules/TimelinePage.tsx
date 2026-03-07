@@ -6,8 +6,9 @@ import { Card, CardTitle } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
-import { Download, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { Download, ChevronLeft, ChevronRight, CalendarDays, ExternalLink } from 'lucide-react'
 import { cn } from '../../components/ui/utils'
+import { buildGoogleCalendarUrl, buildIcsContent, downloadIcsFile } from '../../services/calendar'
 import {
   addMonths,
   subMonths,
@@ -120,28 +121,14 @@ export function TimelinePage() {
 
   const exportCalendar = () => {
     if (!state.core.date) return
-    const partyStart = new Date(state.core.date)
-    const events = state.timeline.tasks.map((task) => {
-      const start = new Date(partyStart.getTime() + task.offsetHours * 60 * 60 * 1000)
-      const iso = start.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-      return [
-        'BEGIN:VEVENT',
-        `UID:${task.id}`,
-        `DTSTAMP:${iso}`,
-        `DTSTART:${iso}`,
-        `SUMMARY:${task.title}`,
-        'END:VEVENT',
-      ].join('\n')
-    })
+    const content = buildIcsContent(state.timeline.tasks, state.core.date)
+    if (content) downloadIcsFile(content, 'party-timeline.ics')
+  }
 
-    const content = ['BEGIN:VCALENDAR', 'VERSION:2.0', ...events, 'END:VCALENDAR'].join('\n')
-    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'party-timeline.ics'
-    link.click()
-    URL.revokeObjectURL(url)
+  const getBaseDateString = (): string => {
+    if (isPartyScope) return state.core.date
+    const ev = state.events.items.find((e) => e.id === selectedEventId)
+    return ev?.date ?? state.core.date
   }
 
   const referencePartyDate = referenceDate ?? (state.core.date ? parseISO(state.core.date) : null)
@@ -367,16 +354,28 @@ export function TimelinePage() {
                     <p className="font-semibold text-white">{task.title}</p>
                     <p className="text-xs text-slate-400">{task.eventName} · {task.offsetHours}h from start</p>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="px-2 py-1 text-xs"
-                    onClick={() => isValid && exportTaskAsIcs(task, baseDate!, `task-${task.title.replace(/\s+/g, '-')}.ics`)}
-                    disabled={!isValid}
-                  >
-                    <Download className="mr-1 size-3" /> Export
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => isValid && exportTaskAsIcs(task, baseDate!, `task-${task.title.replace(/\s+/g, '-')}.ics`)}
+                      disabled={!isValid}
+                    >
+                      <Download className="mr-1 size-3" /> .ics
+                    </Button>
+                    {isValid && (
+                      <a
+                        href={buildGoogleCalendarUrl(task, task.date, task.eventName)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.08]"
+                      >
+                        <ExternalLink className="size-3" /> Google
+                      </a>
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -411,8 +410,18 @@ export function TimelinePage() {
                       className="px-2 py-1 text-xs"
                       onClick={() => exportTaskAsIcs(task, baseDate, `task-${task.title.replace(/\s+/g, '-')}.ics`)}
                     >
-                      <Download className="mr-1 size-3" /> Export
+                      <Download className="mr-1 size-3" /> .ics
                     </Button>
+                    {getBaseDateString() && (
+                      <a
+                        href={buildGoogleCalendarUrl(task, getBaseDateString(), state.core.name || 'Party')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.08]"
+                      >
+                        <ExternalLink className="size-3" /> Google
+                      </a>
+                    )}
                     <Button
                       type="button"
                       onClick={() => setConfirmingRemove({ id: task.id, title: task.title })}

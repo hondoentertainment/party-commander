@@ -5,7 +5,47 @@ import { PartySwitcher } from '../components/PartySwitcher'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useParty } from '../state/PartyContext'
 import { setGuestModeEnabled } from '../state/storage'
-import { User, Wifi, WifiOff } from 'lucide-react'
+import { Bell, BellOff, User, Wifi, WifiOff } from 'lucide-react'
+import { useNotifications } from '../hooks/useNotifications'
+
+function NotificationBell() {
+  const { supported, permission, reminders, requestPermission } = useNotifications()
+  if (!supported) return null
+
+  const count = reminders.length
+  const isEnabled = permission === 'granted'
+
+  const handleClick = async () => {
+    if (permission === 'default') {
+      await requestPermission()
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="relative flex size-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/5 hover:text-white"
+      aria-label={
+        isEnabled
+          ? `Notifications enabled, ${count} upcoming reminder${count !== 1 ? 's' : ''}`
+          : 'Enable notifications'
+      }
+      title={isEnabled ? `${count} upcoming reminder${count !== 1 ? 's' : ''}` : 'Click to enable notifications'}
+    >
+      {isEnabled ? (
+        <Bell size={18} aria-hidden />
+      ) : (
+        <BellOff size={18} aria-hidden />
+      )}
+      {isEnabled && count > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-black">
+          {count > 9 ? '9+' : count}
+        </span>
+      )}
+    </button>
+  )
+}
 
 export function AppShell() {
   const { online, syncing } = useOnlineStatus()
@@ -43,7 +83,7 @@ export function AppShell() {
               <h1 className="text-base font-bold tracking-tight text-white">
                 Party Commander
               </h1>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-400/60">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-400">
                 Command Center
               </p>
             </div>
@@ -56,7 +96,7 @@ export function AppShell() {
 
         {/* Sidebar footer — connection status */}
         <div className="shrink-0 border-t border-white/5 px-6 py-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="status" aria-live="polite">
             {online ? (
               <>
                 <div className="size-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
@@ -87,8 +127,8 @@ export function AppShell() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden border-b border-amber-400/20 bg-amber-500/10"
             >
-              <div className="flex items-center gap-2 px-6 py-2 text-sm text-amber-200">
-                <WifiOff size={14} />
+              <div className="flex items-center gap-2 px-6 py-2 text-sm text-amber-200" role="status">
+                <WifiOff size={14} aria-hidden />
                 Offline mode — changes stay on device.
               </div>
             </motion.div>
@@ -100,8 +140,8 @@ export function AppShell() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden border-b border-emerald-400/20 bg-emerald-500/10"
             >
-              <div className="flex items-center gap-2 px-6 py-2 text-sm text-emerald-200">
-                <Wifi size={14} className="animate-pulse" />
+              <div className="flex items-center gap-2 px-6 py-2 text-sm text-emerald-200" role="status">
+                <Wifi size={14} className="animate-pulse" aria-hidden />
                 Back online — syncing changes…
               </div>
             </motion.div>
@@ -116,7 +156,7 @@ export function AppShell() {
 
           <div className="relative z-10 flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400/70">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400">
                 Party Command Center
               </p>
               <h2 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">
@@ -129,6 +169,7 @@ export function AppShell() {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <NotificationBell />
               <PartySwitcher />
               {user ? (
                 <Link
@@ -140,7 +181,7 @@ export function AppShell() {
                     {user.user_metadata?.avatar_url ? (
                       <img
                         src={user.user_metadata.avatar_url}
-                        alt=""
+                        alt={user.user_metadata?.full_name ? `${user.user_metadata.full_name}'s avatar` : 'User avatar'}
                         className="size-full object-cover"
                       />
                     ) : (
@@ -165,7 +206,7 @@ export function AppShell() {
         </header>
 
         {/* Page content with route transitions */}
-        <main id="main-content" className="px-6 pt-8 pb-24 md:pb-8" role="main">
+        <main id="main-content" className="px-6 pt-8 pb-24 md:pb-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
