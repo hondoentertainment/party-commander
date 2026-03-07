@@ -7,6 +7,7 @@ import { useParty } from '../state/PartyContext'
 import { setGuestModeEnabled } from '../state/storage'
 import { Bell, BellOff, User, Wifi, WifiOff } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
+import { Logo } from '../components/Logo'
 
 function NotificationBell() {
   const { supported, permission, reminders, requestPermission } = useNotifications()
@@ -74,20 +75,7 @@ export function AppShell() {
         aria-label="Sidebar"
       >
         <div className="shrink-0 px-6 py-6">
-          <div className="flex items-center gap-3">
-            <div className="relative flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-emerald-500/10">
-              <span className="text-lg font-black text-emerald-400">⚡</span>
-              <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-transparent blur-sm" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold tracking-tight text-white">
-                Party Commander
-              </h1>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-400">
-                Command Center
-              </p>
-            </div>
-          </div>
+          <Logo size="md" wordmark />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto sidebar-scroll">
@@ -155,18 +143,21 @@ export function AppShell() {
           <div className="glow-sweep" />
 
           <div className="relative z-10 flex items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400">
-                Party Command Center
-              </p>
-              <h2 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">
-                Plan, run, and wrap.
-              </h2>
-              <p className="mt-0.5 text-sm font-medium text-slate-400">
-                {partyProfile
-                  ? `${partyProfile.name} — synced`
-                  : 'Data saved locally in your browser.'}
-              </p>
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <Logo size="sm" className="md:hidden" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400">
+                  Party Command Center
+                </p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">
+                  Plan, run, and wrap.
+                </h2>
+                <p className="mt-0.5 text-sm font-medium text-slate-400">
+                  {partyProfile
+                    ? `${partyProfile.name} — synced`
+                    : 'Data saved locally in your browser.'}
+                </p>
+              </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <NotificationBell />

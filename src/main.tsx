@@ -19,3 +19,10 @@ createRoot(document.getElementById('root')!).render(
     </PartyProvider>
   </StrictMode>,
 )
+
+// Fade out and remove splash screen
+const splash = document.getElementById('splash')
+if (splash) {
+  splash.classList.add('fade-out')
+  setTimeout(() => splash.remove(), 500)
+}
