@@ -354,6 +354,33 @@ export function Dashboard() {
             </AnimatedItem>
           </AnimatedList>
 
+          {/* Quick Actions */}
+          <AnimatedItem>
+            <Card>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="size-5 text-emerald-400" />
+                Quick Actions
+              </CardTitle>
+              <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+                {[
+                  { to: `food`, label: 'Add food', icon: <Utensils className="size-4" /> },
+                  { to: `drinks`, label: 'Add drinks', icon: <GlassWater className="size-4" /> },
+                  { to: `budget`, label: 'Set budget', icon: <DollarSign className="size-4" /> },
+                  { to: `invites`, label: 'Invites', icon: <Users className="size-4" /> },
+                ].map((action) => (
+                  <Link
+                    key={action.to}
+                    to={`/event/${eventId}/${action.to}`}
+                    className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-sm font-medium text-slate-300 transition hover:border-emerald-500/20 hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {action.icon}
+                    {action.label}
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          </AnimatedItem>
+
           {/* Critical Path card */}
           <AnimatedItem>
             <Card>

@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
+  Star,
 } from 'lucide-react'
 import {
   addMonths,
@@ -35,8 +36,9 @@ import {
   startOfDay,
 } from 'date-fns'
 import { getShoppingListItems } from '../state/engines'
+import { generateBudgetOptimization } from '../services/ai'
 import type { DrinkSuggestion, GalleryPhoto, ShoppingListBaseKey } from '../state/types'
-import type { BudgetLineItem, Theme } from '../state/types'
+import type { BudgetLineItem, LeadAssignment, Theme } from '../state/types'
 
 /** Parse dollar amount from string like "$24" or "24.50" */
 function parseCost(value: string): number {
@@ -60,11 +62,43 @@ export function BudgetPage() {
     notes: '',
   })
 
+  const [aiTips, setAiTips] = useState<string[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+
   const manualTotal = state.budget.lineItems.reduce((sum, item) => sum + item.amount, 0)
   const decorTotal = sumDecorCosts(state.decor.items)
   const totalSpent = manualTotal + decorTotal
   const limit = state.budget.limit ?? 0
   const overBudget = limit > 0 && totalSpent > limit
+
+  const runAiOptimize = async () => {
+    setAiLoading(true)
+    try {
+      const tips = await generateBudgetOptimization(state.budget.lineItems, state.budget.limit)
+      setAiTips(tips)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const exportCsv = () => {
+    const rows = [['Label', 'Category', 'Amount', 'Notes']]
+    for (const item of state.budget.lineItems) {
+      rows.push([item.label, item.category, item.amount.toFixed(2), item.notes ?? ''])
+    }
+    if (decorTotal > 0) rows.push(['Decor (auto-synced)', 'decor', decorTotal.toFixed(2), ''])
+    rows.push([])
+    rows.push(['Total', '', totalSpent.toFixed(2), ''])
+    if (limit > 0) rows.push(['Budget Limit', '', limit.toFixed(2), ''])
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'party-budget.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const addLineItem = () => {
     if (!draft.label.trim() && draft.amount <= 0) return
@@ -190,6 +224,35 @@ export function BudgetPage() {
           </Card>
         )
       })()}
+
+      {state.budget.lineItems.length > 0 && (
+        <Card>
+          <div className="flex items-center justify-between">
+            <CardTitle>Tools</CardTitle>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="size-4" /> Export CSV
+            </Button>
+            <Button type="button" size="sm" onClick={runAiOptimize} disabled={aiLoading}>
+              <Sparkles className="size-4" /> {aiLoading ? 'Analyzing…' : 'AI Optimize'}
+            </Button>
+          </div>
+          {aiTips.length > 0 && (
+            <div className="mt-4 space-y-2 rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">AI Suggestions</p>
+              <ul className="space-y-1.5 text-sm text-slate-300">
+                {aiTips.map((tip, i) => (
+                  <li key={i} className="flex gap-2">
+                    <Sparkles className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card>
         <CardTitle>Add line item</CardTitle>
@@ -920,6 +983,16 @@ export function EventsPage() {
                     onChange={(e) => updateEvent(event.id, { leadName: e.target.value || undefined })}
                     placeholder="Lead"
                   />
+                  <Select
+                    value={event.status ?? 'planning'}
+                    onChange={(e) => updateEvent(event.id, { status: e.target.value as 'planning' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' })}
+                  >
+                    <option value="planning">Planning</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </Select>
                   <Textarea
                     value={event.notes}
                     onChange={(e) => updateEvent(event.id, { notes: e.target.value })}
@@ -1013,7 +1086,7 @@ export function LeadsPage() {
 
   const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
   const selectedEvent = selectedEventId ? state.events.items.find((e) => e.id === selectedEventId) : null
-  const currentLeads = isPartyScope
+  const currentLeads: LeadAssignment[] = isPartyScope
     ? state.leads.items
     : (selectedEvent?.leads ?? DEFAULT_LEADS.map((l) => ({ ...l, id: uuid() })))
 
@@ -1050,6 +1123,35 @@ export function LeadsPage() {
   const updateLead = (id: string, leadName: string) => {
     if (isPartyScope) updatePartyLead(id, leadName)
     else updateEventLead(id, leadName)
+  }
+
+  const updateLeadField = (id: string, updates: Partial<{ phone: string; email: string; tasks: string[] }>) => {
+    if (isPartyScope) {
+      dispatch({
+        type: 'update_leads',
+        payload: {
+          items: state.leads.items.map((lead) =>
+            lead.id === id ? { ...lead, ...updates } : lead,
+          ),
+        },
+      })
+    } else if (selectedEventId) {
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((ev) =>
+            ev.id === selectedEventId
+              ? {
+                  ...ev,
+                  leads: (ev.leads ?? DEFAULT_LEADS.map((l) => ({ ...l, id: uuid() }))).map((l) =>
+                    l.id === id ? { ...l, ...updates } : l,
+                  ),
+                }
+              : ev,
+          ),
+        },
+      })
+    }
   }
 
   const copyLeadsToEvent = (targetEventId: string) => {
@@ -1111,15 +1213,38 @@ export function LeadsPage() {
           {currentLeads.map((lead) => (
             <div
               key={lead.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm"
+              className="rounded-xl bg-white/5 px-4 py-3 text-sm"
             >
-              <span className="font-semibold text-white">{lead.function}</span>
-              <Input
-                value={lead.leadName}
-                onChange={(event) => updateLead(lead.id, event.target.value)}
-                placeholder="Lead name"
-                className="max-w-xs"
-              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="font-semibold text-white">{lead.function}</span>
+                <Input
+                  value={lead.leadName}
+                  onChange={(event) => updateLead(lead.id, event.target.value)}
+                  placeholder="Lead name"
+                  className="max-w-xs"
+                />
+              </div>
+              {lead.leadName && (
+                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                  <Input
+                    value={lead.phone ?? ''}
+                    onChange={(e) => updateLeadField(lead.id, { phone: e.target.value })}
+                    placeholder="Phone"
+                    type="tel"
+                  />
+                  <Input
+                    value={lead.email ?? ''}
+                    onChange={(e) => updateLeadField(lead.id, { email: e.target.value })}
+                    placeholder="Email"
+                    type="email"
+                  />
+                  <Input
+                    value={(lead.tasks ?? []).join(', ')}
+                    onChange={(e) => updateLeadField(lead.id, { tasks: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })}
+                    placeholder="Tasks (comma-separated)"
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1138,7 +1263,13 @@ export function MenuPage() {
     source: 'make' as const,
     servings: 0,
     notes: '',
+    allergens: '',
+    dietary: [] as string[],
+    ingredients: '',
+    prepTimeMins: 0,
   })
+
+  const DIETARY_OPTIONS = ['Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free', 'Nut-Free', 'Halal', 'Kosher']
 
   const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
   const currentMenuItems = isPartyScope
@@ -1154,6 +1285,10 @@ export function MenuPage() {
       source: draft.source,
       servings: draft.servings,
       notes: draft.notes.trim(),
+      allergens: draft.allergens.trim() || undefined,
+      dietary: draft.dietary.length > 0 ? draft.dietary : undefined,
+      ingredients: draft.ingredients.trim() || undefined,
+      prepTimeMins: draft.prepTimeMins > 0 ? draft.prepTimeMins : undefined,
     }
     if (isPartyScope) {
       const nextItems = [...state.menu.items, nextItem]
@@ -1172,7 +1307,7 @@ export function MenuPage() {
         },
       })
     }
-    setDraft({ name: '', category: 'snacks', source: 'make', servings: 0, notes: '' })
+    setDraft({ name: '', category: 'snacks', source: 'make', servings: 0, notes: '', allergens: '', dietary: [], ingredients: '', prepTimeMins: 0 })
   }
 
   const syncFoodTimeline = (items: typeof state.menu.items) => {
@@ -1387,6 +1522,60 @@ export function MenuPage() {
               className="mt-2"
             />
           </label>
+          <label className="text-sm text-slate-300">
+            Prep time (mins)
+            <Input
+              type="number"
+              min={0}
+              value={draft.prepTimeMins || ''}
+              onChange={(event) => setDraft({ ...draft, prepTimeMins: Number(event.target.value) || 0 })}
+              className="mt-2"
+              placeholder="e.g. 45"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Ingredients
+            <Input
+              value={draft.ingredients}
+              onChange={(event) => setDraft({ ...draft, ingredients: event.target.value })}
+              className="mt-2"
+              placeholder="flour, eggs, butter"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Allergens
+            <Input
+              value={draft.allergens}
+              onChange={(event) => setDraft({ ...draft, allergens: event.target.value })}
+              className="mt-2"
+              placeholder="nuts, dairy, gluten"
+            />
+          </label>
+          <div className="text-sm text-slate-300">
+            Dietary
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {DIETARY_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setDraft({
+                    ...draft,
+                    dietary: draft.dietary.includes(opt)
+                      ? draft.dietary.filter((d) => d !== opt)
+                      : [...draft.dietary, opt],
+                  })}
+                  className={cn(
+                    'rounded-lg px-2.5 py-1 text-xs font-medium transition',
+                    draft.dietary.includes(opt)
+                      ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
+                      : 'bg-white/5 text-slate-400 hover:bg-white/10',
+                  )}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
           <label className="text-sm text-slate-300 md:col-span-2">
             Notes
             <Input
@@ -1456,12 +1645,37 @@ export function MenuPage() {
                     Suggested servings:{' '}
                     {getSuggestedServings(item.category, state.invites.guestCount)}
                   </p>
-                  <Input
-                    value={item.notes}
-                    onChange={(event) => updateItem(item.id, { notes: event.target.value })}
-                    className="mt-2"
-                    placeholder="Notes"
-                  />
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    <Input
+                      value={item.notes}
+                      onChange={(event) => updateItem(item.id, { notes: event.target.value })}
+                      placeholder="Notes"
+                    />
+                    <Input
+                      value={item.ingredients ?? ''}
+                      onChange={(event) => updateItem(item.id, { ingredients: event.target.value })}
+                      placeholder="Ingredients (comma-separated)"
+                    />
+                    <Input
+                      value={item.allergens ?? ''}
+                      onChange={(event) => updateItem(item.id, { allergens: event.target.value })}
+                      placeholder="Allergens"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={item.prepTimeMins ?? ''}
+                      onChange={(event) => updateItem(item.id, { prepTimeMins: Number(event.target.value) || undefined })}
+                      placeholder="Prep time (mins)"
+                    />
+                  </div>
+                  {(item.dietary && item.dietary.length > 0) && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {item.dietary.map((d) => (
+                        <span key={d} className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">{d}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -1505,6 +1719,7 @@ export function DrinksPage() {
   const customDrinks = state.drinks.customDrinks ?? []
   const drinkOverrides = state.drinks.drinkOverrides ?? {}
   const quantities = state.drinks.quantities ?? []
+  const allDrinks: DrinkSuggestion[] = [...state.drinks.suggestions, ...customDrinks]
 
   const isCustomDrink = (drinkId: string) => customDrinks.some((d) => d.id === drinkId)
   const hasOverride = (drinkId: string) => drinkId in drinkOverrides
@@ -1883,6 +2098,65 @@ export function DrinksPage() {
         )}
       </Card>
 
+      {allDrinks.length > 0 && (
+        <Card>
+          <CardTitle>Cost & Yield Tracker</CardTitle>
+          <p className="mt-1 text-xs text-slate-400">Track cost per drink and batch yields for budgeting.</p>
+          <div className="mt-4 space-y-2">
+            {allDrinks.map((drink) => {
+              const costPerDrink = state.drinks.costPerDrink?.[drink.id] ?? 0
+              const batchYield = state.drinks.batchYield?.[drink.id] ?? 0
+              return (
+                <div key={`cost-${drink.id}`} className="flex flex-wrap items-center gap-3 rounded-xl bg-white/5 px-4 py-2 text-sm">
+                  <span className="min-w-[8rem] font-medium text-slate-300">{drink.name}</span>
+                  <label className="flex items-center gap-1 text-xs text-slate-400">
+                    $/drink
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={costPerDrink || ''}
+                      onChange={(e) => dispatch({
+                        type: 'update_drinks',
+                        payload: { costPerDrink: { ...(state.drinks.costPerDrink ?? {}), [drink.id]: Number(e.target.value) || 0 } },
+                      })}
+                      className="w-20"
+                    />
+                  </label>
+                  {drink.type === 'batch' && (
+                    <label className="flex items-center gap-1 text-xs text-slate-400">
+                      Yield/batch
+                      <Input
+                        type="number"
+                        min={0}
+                        value={batchYield || ''}
+                        onChange={(e) => dispatch({
+                          type: 'update_drinks',
+                          payload: { batchYield: { ...(state.drinks.batchYield ?? {}), [drink.id]: Number(e.target.value) || 0 } },
+                        })}
+                        className="w-20"
+                      />
+                    </label>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <CardTitle>Bar Layout Notes</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Plan your bar station setup, glassware, and garnish stations.</p>
+        <Textarea
+          value={state.drinks.barLayoutNotes ?? ''}
+          onChange={(e) => dispatch({ type: 'update_drinks', payload: { barLayoutNotes: e.target.value } })}
+          className="mt-3"
+          rows={4}
+          placeholder="e.g. Main bar on kitchen island: spirits + mixers on left, garnishes right. Ice bucket under table. Batch cocktails in dispenser."
+        />
+      </Card>
+
       <ConfirmDialog
         open={!!confirmingRemove}
         onClose={() => setConfirmingRemove(null)}
@@ -2076,6 +2350,25 @@ export function DecorPage() {
               <option value="no">Disposable</option>
               <option value="yes">Reusable</option>
             </Select>
+          </label>
+          <label className="text-sm text-slate-300">
+            Photo reference URL
+            <Input
+              value={(draft as Record<string, unknown>).photoRef as string ?? ''}
+              onChange={(event) => setDraft({ ...draft, photoRef: event.target.value } as typeof draft)}
+              className="mt-2"
+              placeholder="https://pinterest.com/..."
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Install time (hours before party)
+            <Input
+              type="number"
+              value={(draft as Record<string, unknown>).installOffsetHours as number ?? ''}
+              onChange={(event) => setDraft({ ...draft, installOffsetHours: Number(event.target.value) || 0 } as typeof draft)}
+              className="mt-2"
+              placeholder="e.g. 3"
+            />
           </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Storage note
@@ -2509,6 +2802,9 @@ export function TimelinePage() {
   const [draft, setDraft] = useState({
     title: '',
     offsetHours: -24,
+    durationMins: 0,
+    assignee: '',
+    description: '',
   })
 
   const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
@@ -2528,6 +2824,9 @@ export function TimelinePage() {
       title: draft.title.trim(),
       offsetHours: Number(draft.offsetHours),
       status: 'not_started' as const,
+      durationMins: draft.durationMins > 0 ? draft.durationMins : undefined,
+      assignee: draft.assignee.trim() || undefined,
+      description: draft.description.trim() || undefined,
     }
     if (isPartyScope) {
       dispatch({
@@ -2547,7 +2846,7 @@ export function TimelinePage() {
         },
       })
     }
-    setDraft({ title: '', offsetHours: -24 })
+    setDraft({ title: '', offsetHours: -24, durationMins: 0, assignee: '', description: '' })
   }
 
   const removeTask = (id: string) => {
@@ -2781,6 +3080,35 @@ export function TimelinePage() {
                 setDraft({ ...draft, offsetHours: Number(event.target.value) })
               }
               className="mt-2"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Duration (mins)
+            <Input
+              type="number"
+              min={0}
+              value={draft.durationMins || ''}
+              onChange={(event) => setDraft({ ...draft, durationMins: Number(event.target.value) || 0 })}
+              className="mt-2"
+              placeholder="e.g. 30"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Assigned to
+            <Input
+              value={draft.assignee}
+              onChange={(event) => setDraft({ ...draft, assignee: event.target.value })}
+              className="mt-2"
+              placeholder="Lead name"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Description
+            <Input
+              value={draft.description}
+              onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+              className="mt-2"
+              placeholder="Details / notes"
             />
           </label>
         </div>
@@ -3043,6 +3371,9 @@ export function GamesPage() {
     rules: '',
     supplies: '',
     link: '',
+    difficulty: 'medium' as 'easy' | 'medium' | 'hard',
+    minAge: undefined as number | undefined,
+    alternative: '',
   })
 
   const addGame = () => {
@@ -3064,6 +3395,9 @@ export function GamesPage() {
               .map((item) => item.trim())
               .filter(Boolean),
             link: draft.link.trim() || undefined,
+            difficulty: draft.difficulty,
+            minAge: draft.minAge,
+            alternative: draft.alternative.trim() || undefined,
           },
         ],
       },
@@ -3076,6 +3410,9 @@ export function GamesPage() {
       rules: '',
       supplies: '',
       link: '',
+      difficulty: 'medium',
+      minAge: undefined,
+      alternative: '',
     })
   }
 
@@ -3157,6 +3494,29 @@ export function GamesPage() {
               placeholder="Each person shares two truths and one lie..."
             />
           </label>
+          <label className="text-sm text-slate-300">
+            Difficulty
+            <Select
+              value={draft.difficulty}
+              onChange={(event) => setDraft({ ...draft, difficulty: event.target.value as 'easy' | 'medium' | 'hard' })}
+              className="mt-2"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </Select>
+          </label>
+          <label className="text-sm text-slate-300">
+            Min age
+            <Input
+              type="number"
+              min={0}
+              value={draft.minAge ?? ''}
+              onChange={(event) => setDraft({ ...draft, minAge: Number(event.target.value) || undefined })}
+              className="mt-2"
+              placeholder="e.g. 18"
+            />
+          </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Supplies (comma separated)
             <Input
@@ -3164,6 +3524,15 @@ export function GamesPage() {
               onChange={(event) => setDraft({ ...draft, supplies: event.target.value })}
               className="mt-2"
               placeholder="Cards, markers"
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Alternative game (if this one falls flat)
+            <Input
+              value={draft.alternative}
+              onChange={(event) => setDraft({ ...draft, alternative: event.target.value })}
+              className="mt-2"
+              placeholder="e.g. Switch to charades"
             />
           </label>
           <label className="text-sm text-slate-300 md:col-span-2">
@@ -3195,12 +3564,19 @@ export function GamesPage() {
                     <p className="font-semibold text-white">{game.name}</p>
                     <p className="text-xs uppercase text-slate-400">
                       {game.category} · {game.durationMins} mins · {game.groupSize}
+                      {game.difficulty && game.difficulty !== 'medium' ? ` · ${game.difficulty}` : ''}
+                      {game.minAge ? ` · ${game.minAge}+` : ''}
                     </p>
                     {game.supplies.length ? (
                       <p className="mt-2 text-xs text-slate-400">
                         Supplies: {game.supplies.join(', ')}
                       </p>
                     ) : null}
+                    {game.alternative && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Alt: {game.alternative}
+                      </p>
+                    )}
                     <label className="mt-2 block">
                       <span className="text-xs text-slate-500">Game link (for QR code)</span>
                       <Input
@@ -3281,7 +3657,7 @@ export function VenuePage() {
                   <option value="reserved">Reserved</option>
                 </Select>
               </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <Input
                   value={amenity.reservationLink}
                   onChange={(event) =>
@@ -3297,6 +3673,16 @@ export function VenuePage() {
                   }
                   className="text-xs"
                   placeholder="Confirmation note"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  value={amenity.capacity ?? ''}
+                  onChange={(event) =>
+                    updateAmenity(amenity.id, { capacity: Number(event.target.value) || undefined })
+                  }
+                  className="text-xs"
+                  placeholder="Max capacity"
                 />
               </div>
             </div>
@@ -3368,6 +3754,56 @@ export function VenuePage() {
           </label>
         </div>
       </Card>
+
+      <Card>
+        <CardTitle>Venue Details</CardTitle>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-sm text-slate-300">
+            Access hours
+            <Input
+              value={state.venue.accessHours ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { accessHours: event.target.value } })
+              }
+              className="mt-2"
+              placeholder="e.g. 6 PM – 2 AM"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Parking notes
+            <Input
+              value={state.venue.parkingNotes ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { parkingNotes: event.target.value } })
+              }
+              className="mt-2"
+              placeholder="Street parking, garage on 5th..."
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Noise restrictions
+            <Input
+              value={state.venue.noiseRestrictions ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { noiseRestrictions: event.target.value } })
+              }
+              className="mt-2"
+              placeholder="Quiet hours after 10 PM, no outdoor speakers..."
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Weather contingency plan
+            <Textarea
+              value={state.venue.weatherPlan ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { weatherPlan: event.target.value } })
+              }
+              rows={2}
+              placeholder="If rain: move to party room. If cold: bring space heaters..."
+            />
+          </label>
+        </div>
+      </Card>
     </div>
   )
 }
@@ -3376,6 +3812,7 @@ export function EntryPage() {
   const { state, dispatch } = useParty()
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const [textDraft, setTextDraft] = useState('')
+  const [guestDraft, setGuestDraft] = useState('')
 
   const addText = () => {
     if (!textDraft.trim()) return
@@ -3411,6 +3848,7 @@ export function EntryPage() {
               className="mt-2"
               placeholder="butterflymx://..."
             />
+            {state.entry.butterflyLink && <GameQRCode url={state.entry.butterflyLink} />}
           </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Entry instructions
@@ -3457,6 +3895,127 @@ export function EntryPage() {
           ))}
         </div>
       </Card>
+      <Card>
+        <CardTitle>Guest Check-in</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Track who has arrived.</p>
+        <div className="mt-4 flex gap-2">
+          <Input
+            value={guestDraft}
+            onChange={(event) => setGuestDraft(event.target.value)}
+            className="flex-1"
+            placeholder="Guest name"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && guestDraft.trim()) {
+                dispatch({
+                  type: 'update_entry',
+                  payload: {
+                    guestCheckin: [
+                      ...(state.entry.guestCheckin ?? []),
+                      { id: uuid(), name: guestDraft.trim(), checkedIn: false },
+                    ],
+                  },
+                })
+                setGuestDraft('')
+              }
+            }}
+          />
+          <Button
+            type="button"
+            onClick={() => {
+              if (!guestDraft.trim()) return
+              dispatch({
+                type: 'update_entry',
+                payload: {
+                  guestCheckin: [
+                    ...(state.entry.guestCheckin ?? []),
+                    { id: uuid(), name: guestDraft.trim(), checkedIn: false },
+                  ],
+                },
+              })
+              setGuestDraft('')
+            }}
+          >
+            Add
+          </Button>
+        </div>
+        {(state.entry.guestCheckin ?? []).length > 0 && (
+          <div className="mt-2 text-xs text-slate-400">
+            {(state.entry.guestCheckin ?? []).filter((g) => g.checkedIn).length} / {(state.entry.guestCheckin ?? []).length} checked in
+          </div>
+        )}
+        <div className="mt-4 space-y-2">
+          {(state.entry.guestCheckin ?? []).map((guest) => (
+            <div
+              key={guest.id}
+              className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch({
+                    type: 'update_entry',
+                    payload: {
+                      guestCheckin: (state.entry.guestCheckin ?? []).map((g) =>
+                        g.id === guest.id
+                          ? { ...g, checkedIn: !g.checkedIn, checkinTime: !g.checkedIn ? new Date().toISOString() : undefined }
+                          : g,
+                      ),
+                    },
+                  })
+                }
+                className={cn(
+                  'flex items-center gap-2 transition',
+                  guest.checkedIn ? 'text-emerald-300' : 'text-slate-300',
+                )}
+              >
+                <span className={cn(
+                  'flex size-5 items-center justify-center rounded border text-xs',
+                  guest.checkedIn ? 'border-emerald-500 bg-emerald-500/20' : 'border-white/20',
+                )}>
+                  {guest.checkedIn ? '✓' : ''}
+                </span>
+                {guest.name}
+                {guest.plusOnes ? ` (+${guest.plusOnes})` : ''}
+              </button>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={guest.plusOnes ?? ''}
+                  onChange={(e) =>
+                    dispatch({
+                      type: 'update_entry',
+                      payload: {
+                        guestCheckin: (state.entry.guestCheckin ?? []).map((g) =>
+                          g.id === guest.id ? { ...g, plusOnes: Number(e.target.value) || undefined } : g,
+                        ),
+                      },
+                    })
+                  }
+                  className="w-16 text-xs"
+                  placeholder="+1s"
+                />
+                <Button
+                  variant="ghost"
+                  className="text-xs"
+                  onClick={() =>
+                    dispatch({
+                      type: 'update_entry',
+                      payload: {
+                        guestCheckin: (state.entry.guestCheckin ?? []).filter((g) => g.id !== guest.id),
+                      },
+                    })
+                  }
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <ConfirmDialog
         open={!!confirmingRemove}
         onClose={() => setConfirmingRemove(null)}
@@ -3696,6 +4255,8 @@ export function PhotoVideoPage() {
     title: '',
     type: 'photo' as const,
     notes: '',
+    assignee: '',
+    scheduledOffset: undefined as number | undefined,
   })
   const [equipmentItem, setEquipmentItem] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -3713,11 +4274,13 @@ export function PhotoVideoPage() {
             type: draft.type,
             status: 'not_started' as const,
             notes: draft.notes.trim(),
+            assignee: draft.assignee.trim() || undefined,
+            scheduledOffset: draft.scheduledOffset,
           },
         ],
       },
     })
-    setDraft({ title: '', type: 'photo', notes: '' })
+    setDraft({ title: '', type: 'photo', notes: '', assignee: '', scheduledOffset: undefined })
   }
 
   const updateShot = (
@@ -3864,6 +4427,25 @@ export function PhotoVideoPage() {
               <option value="video">Video</option>
             </Select>
           </label>
+          <label className="text-sm text-slate-300">
+            Assignee
+            <Input
+              value={draft.assignee}
+              onChange={(event) => setDraft({ ...draft, assignee: event.target.value })}
+              className="mt-2"
+              placeholder="Photographer name"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Schedule (hrs from start)
+            <Input
+              type="number"
+              value={draft.scheduledOffset ?? ''}
+              onChange={(event) => setDraft({ ...draft, scheduledOffset: Number(event.target.value) || undefined })}
+              className="mt-2"
+              placeholder="e.g. 2"
+            />
+          </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Notes
             <Input
@@ -3925,6 +4507,25 @@ export function PhotoVideoPage() {
                         <option value="done">Done</option>
                       </Select>
                     </div>
+                    <div className="mt-2 grid gap-2 md:grid-cols-2">
+                      <Input
+                        value={shot.assignee ?? ''}
+                        onChange={(event) =>
+                          updateShot(shot.id, { assignee: event.target.value || undefined })
+                        }
+                        className="text-xs"
+                        placeholder="Assignee"
+                      />
+                      <Input
+                        type="number"
+                        value={shot.scheduledOffset ?? ''}
+                        onChange={(event) =>
+                          updateShot(shot.id, { scheduledOffset: Number(event.target.value) || undefined })
+                        }
+                        className="text-xs"
+                        placeholder="Offset hrs"
+                      />
+                    </div>
                     <Input
                       value={shot.notes}
                       onChange={(event) =>
@@ -3962,15 +4563,26 @@ export function PhotoVideoPage() {
           className="sr-only"
           onChange={handlePhotoUpload}
         />
-        <Button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="mt-4"
-          variant="outline"
-        >
-          <ImagePlus className="mr-2 h-4 w-4" />
-          Upload photos
-        </Button>
+        <div className="mt-4 flex gap-2">
+          <Button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            Upload photos
+          </Button>
+          {state.photoVideo.photos.length > 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => state.photoVideo.photos.forEach((p) => downloadPhoto(p))}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download all ({state.photoVideo.photos.length})
+            </Button>
+          )}
+        </div>
         {state.photoVideo.photos.length === 0 ? (
           <p className="mt-6 text-sm text-slate-500">No photos yet. Add some to build your gallery.</p>
         ) : (
@@ -4095,6 +4707,8 @@ export function PostPartyPage() {
   const [confirmingRemove, setConfirmingRemove] = useState<PostPartyConfirming>(null)
   const [cleanupItem, setCleanupItem] = useState('')
   const [leftoverItem, setLeftoverItem] = useState('')
+  const [feedbackDraft, setFeedbackDraft] = useState('')
+  const [feedbackType, setFeedbackType] = useState<'worked' | 'didnt'>('worked')
 
   const toggleFavoriteDrink = (drinkId: string) => {
     const favs = state.postParty.favorites.drinks
@@ -4338,6 +4952,195 @@ export function PostPartyPage() {
       </Card>
 
       <Card>
+        <CardTitle>Structured Feedback</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Capture specific wins and areas to improve.</p>
+        <div className="mt-4 flex gap-2">
+          <Select
+            value={feedbackType}
+            onChange={(e) => { setFeedbackType(e.target.value as 'worked' | 'didnt') }}
+            className="w-36 text-xs"
+          >
+            <option value="worked">What worked</option>
+            <option value="didnt">What didn&apos;t</option>
+          </Select>
+          <Input
+            value={feedbackDraft}
+            onChange={(e) => setFeedbackDraft(e.target.value)}
+            className="flex-1"
+            placeholder={feedbackType === 'worked' ? 'e.g. Signature cocktails were a hit' : 'e.g. Ran out of ice early'}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && feedbackDraft.trim()) {
+                const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                dispatch({
+                  type: 'update_post_party',
+                  payload: {
+                    feedback: feedbackType === 'worked'
+                      ? { ...feedback, whatWorked: [...feedback.whatWorked, feedbackDraft.trim()] }
+                      : { ...feedback, whatDidnt: [...feedback.whatDidnt, feedbackDraft.trim()] },
+                  },
+                })
+                setFeedbackDraft('')
+              }
+            }}
+          />
+          <Button
+            type="button"
+            onClick={() => {
+              if (!feedbackDraft.trim()) return
+              const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+              dispatch({
+                type: 'update_post_party',
+                payload: {
+                  feedback: feedbackType === 'worked'
+                    ? { ...feedback, whatWorked: [...feedback.whatWorked, feedbackDraft.trim()] }
+                    : { ...feedback, whatDidnt: [...feedback.whatDidnt, feedbackDraft.trim()] },
+                },
+              })
+              setFeedbackDraft('')
+            }}
+          >
+            Add
+          </Button>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase text-emerald-400">What worked</p>
+            <ul className="space-y-1">
+              {(state.postParty.feedback?.whatWorked ?? []).map((item, i) => (
+                <li key={i} className="flex items-center justify-between rounded-lg bg-emerald-500/5 px-3 py-1.5 text-sm text-emerald-200">
+                  {item}
+                  <button
+                    type="button"
+                    className="text-xs text-slate-500 hover:text-white"
+                    onClick={() => {
+                      const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                      dispatch({
+                        type: 'update_post_party',
+                        payload: {
+                          feedback: { ...feedback, whatWorked: feedback.whatWorked.filter((_, idx) => idx !== i) },
+                        },
+                      })
+                    }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase text-rose-400">What didn&apos;t</p>
+            <ul className="space-y-1">
+              {(state.postParty.feedback?.whatDidnt ?? []).map((item, i) => (
+                <li key={i} className="flex items-center justify-between rounded-lg bg-rose-500/5 px-3 py-1.5 text-sm text-rose-200">
+                  {item}
+                  <button
+                    type="button"
+                    className="text-xs text-slate-500 hover:text-white"
+                    onClick={() => {
+                      const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                      dispatch({
+                        type: 'update_post_party',
+                        payload: {
+                          feedback: { ...feedback, whatDidnt: feedback.whatDidnt.filter((_, idx) => idx !== i) },
+                        },
+                      })
+                    }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Budget Reconciliation</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Compare planned vs actual spend.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-xs text-slate-400">Planned</p>
+            <p className="text-xl font-bold text-white">
+              ${state.budget.lineItems.reduce((s, i) => s + i.amount, 0).toFixed(0)}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-xs text-slate-400">Actual</p>
+            <Input
+              type="number"
+              min={0}
+              value={state.postParty.actualSpent ?? ''}
+              onChange={(e) =>
+                dispatch({ type: 'update_post_party', payload: { actualSpent: Number(e.target.value) || undefined } })
+              }
+              className="mt-1 text-center text-lg font-bold"
+              placeholder="$0"
+            />
+          </div>
+          <div className="rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-xs text-slate-400">Difference</p>
+            {state.postParty.actualSpent != null ? (
+              <p className={cn(
+                'text-xl font-bold',
+                state.postParty.actualSpent <= state.budget.lineItems.reduce((s, i) => s + i.amount, 0) ? 'text-emerald-400' : 'text-rose-400',
+              )}>
+                {state.postParty.actualSpent <= state.budget.lineItems.reduce((s, i) => s + i.amount, 0) ? '-' : '+'}
+                ${Math.abs(state.postParty.actualSpent - state.budget.lineItems.reduce((s, i) => s + i.amount, 0)).toFixed(0)}
+              </p>
+            ) : (
+              <p className="text-xl font-bold text-slate-600">—</p>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Overall Rating</CardTitle>
+        <div className="mt-4 flex items-center gap-4">
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                  dispatch({
+                    type: 'update_post_party',
+                    payload: { feedback: { ...feedback, overallRating: n } },
+                  })
+                }}
+                className={cn(
+                  'text-2xl transition',
+                  (state.postParty.feedback?.overallRating ?? 0) >= n ? 'text-yellow-400' : 'text-slate-700',
+                )}
+              >
+                <Star className={cn('size-7', (state.postParty.feedback?.overallRating ?? 0) >= n ? 'fill-yellow-400' : '')} />
+              </button>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              'text-xs',
+              state.postParty.feedback?.wouldRepeat ? 'bg-emerald-500/20 text-emerald-200' : '',
+            )}
+            onClick={() => {
+              const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+              dispatch({
+                type: 'update_post_party',
+                payload: { feedback: { ...feedback, wouldRepeat: !feedback.wouldRepeat } },
+              })
+            }}
+          >
+            {state.postParty.feedback?.wouldRepeat ? '✓ Would repeat' : 'Would repeat?'}
+          </Button>
+        </div>
+      </Card>
+
+      <Card>
         <CardTitle>Notes</CardTitle>
         <Textarea
           value={state.postParty.notes}
@@ -4346,7 +5149,7 @@ export function PostPartyPage() {
           }
           rows={4}
           className="mt-3"
-          placeholder="What worked? What didn’t?"
+          placeholder="General notes and reflections"
         />
       </Card>
     </div>
