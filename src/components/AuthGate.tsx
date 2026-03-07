@@ -7,6 +7,7 @@ import { Input } from './ui/Input'
 import { Sparkles, Lock, Loader2, ShieldCheck, Mail, MailCheck, ShieldX } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParty } from '../state/PartyContext'
+import { isGuestModeEnabled, setGuestModeEnabled } from '../state/storage'
 
 /** Parse the VITE_ALLOWED_EMAIL_DOMAINS env var into a lowercase domain list. */
 function getAllowedDomains(): string[] {
@@ -112,6 +113,7 @@ function AccessDenied({ email }: { email: string }) {
 export function AuthGate() {
     const { state } = useParty()
     const navigate = useNavigate()
+    const [guestMode, setGuestMode] = useState(() => isGuestModeEnabled())
 
     useEffect(() => {
         if (!state.auth.user) return
@@ -141,6 +143,10 @@ export function AuthGate() {
         if (!isDomainAllowed(userEmail)) {
             return <AccessDenied email={userEmail} />
         }
+        return <Outlet />
+    }
+
+    if (guestMode) {
         return <Outlet />
     }
 
@@ -212,6 +218,12 @@ export function AuthGate() {
         } finally {
             setDemoLoading(false)
         }
+    }
+
+    const handleContinueLocal = () => {
+        setGuestModeEnabled(true)
+        setGuestMode(true)
+        navigate('/', { replace: true })
     }
 
     const showPasswordForm = authMethod === 'password' || (!authMethod && !magicLinkSent && !emailConfirmationSent && !resetEmailSent)
@@ -512,6 +524,23 @@ export function AuthGate() {
                                 {demoLoading ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                                 Quick demo
                             </button>
+                        </div>
+                        <div className="rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-4">
+                            <p className="text-sm font-medium text-white">
+                                Need to start right away?
+                            </p>
+                            <p className="mt-1 text-sm text-slate-400">
+                                Continue locally to create an event without signing in. Your data stays on this device until you connect an account.
+                            </p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="lg"
+                                className="mt-4 w-full rounded-2xl"
+                                onClick={handleContinueLocal}
+                            >
+                                Continue locally
+                            </Button>
                         </div>
                     </div>
                 </Card>

@@ -2,6 +2,7 @@ import type { PartyState } from './types'
 
 const STORAGE_KEY = 'party-command-center'
 const LAST_PARTY_KEY = 'party-command-center-last-party'
+const GUEST_MODE_KEY = 'party-command-center-guest-mode'
 const STORAGE_VERSION = 1
 
 interface StoredState {
@@ -36,6 +37,18 @@ export function getLastPartyId(): string | null {
 export function setLastPartyId(partyId: string | null) {
   if (partyId) localStorage.setItem(LAST_PARTY_KEY, partyId)
   else localStorage.removeItem(LAST_PARTY_KEY)
+}
+
+export function isGuestModeEnabled(): boolean {
+  return localStorage.getItem(GUEST_MODE_KEY) === '1'
+}
+
+export function setGuestModeEnabled(enabled: boolean): void {
+  if (enabled) {
+    localStorage.setItem(GUEST_MODE_KEY, '1')
+    return
+  }
+  localStorage.removeItem(GUEST_MODE_KEY)
 }
 
 const HIDDEN_FROM_HOME_KEY = 'party-command-center-hidden-from-home'

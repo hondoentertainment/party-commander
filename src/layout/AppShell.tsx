@@ -4,6 +4,7 @@ import { Navigation } from './Navigation'
 import { PartySwitcher } from '../components/PartySwitcher'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useParty } from '../state/PartyContext'
+import { setGuestModeEnabled } from '../state/storage'
 import { User, Wifi, WifiOff } from 'lucide-react'
 
 export function AppShell() {
@@ -13,6 +14,10 @@ export function AppShell() {
   const user = state.auth.user as {
     user_metadata?: { avatar_url?: string; full_name?: string }
   } | null
+  const handleSignIn = () => {
+    setGuestModeEnabled(false)
+    window.location.reload()
+  }
 
   return (
     <div className="min-h-screen bg-[#0b0f14] text-slate-100">
@@ -125,26 +130,36 @@ export function AppShell() {
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <PartySwitcher />
-              <Link
-                to="/profile"
-                className="group flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-slate-400 transition-all hover:bg-white/5 hover:text-white"
-                aria-label="Open profile"
-              >
-                <div className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-white/[0.06] ring-1 ring-white/10 transition-all group-hover:ring-emerald-500/30">
-                  {user?.user_metadata?.avatar_url ? (
-                    <img
-                      src={user.user_metadata.avatar_url}
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <User className="size-5 text-slate-500" />
-                  )}
-                </div>
-                <span className="hidden text-sm font-medium md:inline">
-                  {user?.user_metadata?.full_name ?? 'Profile'}
-                </span>
-              </Link>
+              {user ? (
+                <Link
+                  to="/profile"
+                  className="group flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-slate-400 transition-all hover:bg-white/5 hover:text-white"
+                  aria-label="Open profile"
+                >
+                  <div className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-white/[0.06] ring-1 ring-white/10 transition-all group-hover:ring-emerald-500/30">
+                    {user.user_metadata?.avatar_url ? (
+                      <img
+                        src={user.user_metadata.avatar_url}
+                        alt=""
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <User className="size-5 text-slate-500" />
+                    )}
+                  </div>
+                  <span className="hidden text-sm font-medium md:inline">
+                    {user.user_metadata?.full_name ?? 'Profile'}
+                  </span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSignIn}
+                  className="rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"
+                >
+                  Sign in
+                </button>
+              )}
             </div>
           </div>
         </header>

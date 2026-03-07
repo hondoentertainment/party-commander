@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { parseISO, format, isPast } from 'date-fns'
 import { useParty } from '../state/PartyContext'
 import type { PartyRow } from '../services/parties'
-import { getHiddenFromHomePartyIds, removePartyFromHiddenFromHome } from '../state/storage'
+import { getHiddenFromHomePartyIds, removePartyFromHiddenFromHome, setGuestModeEnabled } from '../state/storage'
 import { ProfileService, type Profile } from '../services/profile'
 import { AuthService } from '../services/auth'
 import { Card } from '../components/ui/Card'
@@ -261,7 +261,31 @@ export function ProfilePage() {
         AuthService.signOut()
     }
 
-    if (!user) return null
+    if (!user) {
+        return (
+            <div className="mx-auto max-w-2xl">
+                <Card className="border-white/5 bg-black/40 p-6 backdrop-blur-2xl">
+                    <h1 className="text-2xl font-semibold text-white">Sign in to sync your events</h1>
+                    <p className="mt-2 text-slate-400">
+                        You&apos;re currently using Party Commander in local mode. You can keep planning here, or sign in to sync events across devices and collaborate with your team.
+                    </p>
+                    <div className="mt-6 flex gap-3">
+                        <Button onClick={() => navigate('/')} variant="outline">
+                            Back to dashboard
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setGuestModeEnabled(false)
+                                window.location.reload()
+                            }}
+                        >
+                            Sign in
+                        </Button>
+                    </div>
+                </Card>
+            </div>
+        )
+    }
 
     const avatarUrl = profile?.avatar_url ?? user.user_metadata?.avatar_url
 
