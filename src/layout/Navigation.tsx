@@ -176,8 +176,9 @@ function BottomNavigation({
                   type="button"
                   onClick={() => setMoreOpen(false)}
                   className="flex size-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Close modules menu"
                 >
-                  <X size={16} />
+                  <X size={16} aria-hidden />
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-2">
