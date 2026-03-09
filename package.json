@@ -11,16 +11,24 @@
     "setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup.ps1",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "api:dev": "npx tsx --watch server/index.ts",
+    "api:build": "tsc -p server/tsconfig.json",
+    "api:start": "node dist-server/index.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.97.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
     "framer-motion": "^12.34.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.18",
