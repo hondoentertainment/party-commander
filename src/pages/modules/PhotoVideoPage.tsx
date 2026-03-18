@@ -51,6 +51,8 @@ export function PhotoVideoPage() {
     title: '',
     type: 'photo' as const,
     notes: '',
+    assignee: '',
+    scheduledOffset: undefined as number | undefined,
   })
   const [equipmentItem, setEquipmentItem] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -68,11 +70,13 @@ export function PhotoVideoPage() {
             type: draft.type,
             status: 'not_started' as const,
             notes: draft.notes.trim(),
+            assignee: draft.assignee.trim() || undefined,
+            scheduledOffset: draft.scheduledOffset,
           },
         ],
       },
     })
-    setDraft({ title: '', type: 'photo', notes: '' })
+    setDraft({ title: '', type: 'photo', notes: '', assignee: '', scheduledOffset: undefined })
   }
 
   const updateShot = (
@@ -219,6 +223,25 @@ export function PhotoVideoPage() {
               <option value="video">Video</option>
             </Select>
           </label>
+          <label className="text-sm text-slate-300">
+            Assignee
+            <Input
+              value={draft.assignee}
+              onChange={(event) => setDraft({ ...draft, assignee: event.target.value })}
+              className="mt-2"
+              placeholder="Photographer name"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Schedule (hrs from start)
+            <Input
+              type="number"
+              value={draft.scheduledOffset ?? ''}
+              onChange={(event) => setDraft({ ...draft, scheduledOffset: Number(event.target.value) || undefined })}
+              className="mt-2"
+              placeholder="e.g. 2"
+            />
+          </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Notes
             <Input
@@ -280,6 +303,25 @@ export function PhotoVideoPage() {
                         <option value="done">Done</option>
                       </Select>
                     </div>
+                    <div className="mt-2 grid gap-2 md:grid-cols-2">
+                      <Input
+                        value={shot.assignee ?? ''}
+                        onChange={(event) =>
+                          updateShot(shot.id, { assignee: event.target.value || undefined })
+                        }
+                        className="text-xs"
+                        placeholder="Assignee"
+                      />
+                      <Input
+                        type="number"
+                        value={shot.scheduledOffset ?? ''}
+                        onChange={(event) =>
+                          updateShot(shot.id, { scheduledOffset: Number(event.target.value) || undefined })
+                        }
+                        className="text-xs"
+                        placeholder="Offset hrs"
+                      />
+                    </div>
                     <Input
                       value={shot.notes}
                       onChange={(event) =>
@@ -317,15 +359,26 @@ export function PhotoVideoPage() {
           className="sr-only"
           onChange={handlePhotoUpload}
         />
-        <Button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="mt-4"
-          variant="outline"
-        >
-          <ImagePlus className="mr-2 h-4 w-4" />
-          Upload photos
-        </Button>
+        <div className="mt-4 flex gap-2">
+          <Button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            Upload photos
+          </Button>
+          {state.photoVideo.photos.length > 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => state.photoVideo.photos.forEach((p) => downloadPhoto(p))}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download all ({state.photoVideo.photos.length})
+            </Button>
+          )}
+        </div>
         {state.photoVideo.photos.length === 0 ? (
           <p className="mt-6 text-sm text-slate-500">No photos yet. Add some to build your gallery.</p>
         ) : (

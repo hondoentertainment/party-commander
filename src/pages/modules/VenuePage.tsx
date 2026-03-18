@@ -2,6 +2,7 @@ import { useParty } from '../../state/PartyContext'
 import { Card, CardTitle } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
+import { Textarea } from '../../components/ui/Textarea'
 
 export function VenuePage() {
   const { state, dispatch } = useParty()
@@ -43,7 +44,7 @@ export function VenuePage() {
                   <option value="reserved">Reserved</option>
                 </Select>
               </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <Input
                   value={amenity.reservationLink}
                   onChange={(event) =>
@@ -59,6 +60,16 @@ export function VenuePage() {
                   }
                   className="text-xs"
                   placeholder="Confirmation note"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  value={amenity.capacity ?? ''}
+                  onChange={(event) =>
+                    updateAmenity(amenity.id, { capacity: Number(event.target.value) || undefined })
+                  }
+                  className="text-xs"
+                  placeholder="Max capacity"
                 />
               </div>
             </div>
@@ -127,6 +138,56 @@ export function VenuePage() {
               <option value="no">No</option>
               <option value="yes">Yes</option>
             </Select>
+          </label>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Venue Details</CardTitle>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-sm text-slate-300">
+            Access hours
+            <Input
+              value={state.venue.accessHours ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { accessHours: event.target.value } })
+              }
+              className="mt-2"
+              placeholder="e.g. 6 PM - 2 AM"
+            />
+          </label>
+          <label className="text-sm text-slate-300">
+            Parking notes
+            <Input
+              value={state.venue.parkingNotes ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { parkingNotes: event.target.value } })
+              }
+              className="mt-2"
+              placeholder="Street parking, garage on 5th..."
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Noise restrictions
+            <Input
+              value={state.venue.noiseRestrictions ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { noiseRestrictions: event.target.value } })
+              }
+              className="mt-2"
+              placeholder="Quiet hours after 10 PM, no outdoor speakers..."
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Weather contingency plan
+            <Textarea
+              value={state.venue.weatherPlan ?? ''}
+              onChange={(event) =>
+                dispatch({ type: 'update_venue', payload: { weatherPlan: event.target.value } })
+              }
+              rows={2}
+              placeholder="If rain: move to party room. If cold: bring space heaters..."
+            />
           </label>
         </div>
       </Card>

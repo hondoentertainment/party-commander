@@ -21,8 +21,6 @@ export function PartySwitcher() {
   const hidden = new Set(getHiddenFromHomePartyIds())
   const visibleParties = parties.filter((p) => !hidden.has(p.id))
 
-  if (!partyProfile || parties.length === 0) return null
-
   const current = parties.find((p) => p.id === currentPartyId) ?? parties[0]
   const isOwner = current && partyProfile && current.party_profile_id === partyProfile.id
 
@@ -91,6 +89,8 @@ export function PartySwitcher() {
       previouslyFocused?.focus()
     }
   }, [open])
+
+  if (!partyProfile || parties.length === 0) return null
 
   return (
     <div className="relative">

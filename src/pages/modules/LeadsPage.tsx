@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 import { Card, CardTitle } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
+import type { LeadAssignment } from '../../state/types'
 
 const DEFAULT_LEADS = [
   { id: 'budget', function: 'Budget', leadName: '' },
@@ -30,7 +31,7 @@ export function LeadsPage() {
 
   const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
   const selectedEvent = selectedEventId ? state.events.items.find((e) => e.id === selectedEventId) : null
-  const currentLeads = isPartyScope
+  const currentLeads: LeadAssignment[] = isPartyScope
     ? state.leads.items
     : (selectedEvent?.leads ?? DEFAULT_LEADS.map((l) => ({ ...l, id: uuid() })))
 
@@ -67,6 +68,35 @@ export function LeadsPage() {
   const updateLead = (id: string, leadName: string) => {
     if (isPartyScope) updatePartyLead(id, leadName)
     else updateEventLead(id, leadName)
+  }
+
+  const updateLeadField = (id: string, updates: Partial<LeadAssignment>) => {
+    if (isPartyScope) {
+      dispatch({
+        type: 'update_leads',
+        payload: {
+          items: state.leads.items.map((lead) =>
+            lead.id === id ? { ...lead, ...updates } : lead,
+          ),
+        },
+      })
+    } else if (selectedEventId && !isPartyScope) {
+      dispatch({
+        type: 'update_events',
+        payload: {
+          items: state.events.items.map((ev) =>
+            ev.id === selectedEventId
+              ? {
+                  ...ev,
+                  leads: (ev.leads ?? DEFAULT_LEADS.map((l) => ({ ...l, id: uuid() }))).map((l) =>
+                    l.id === id ? { ...l, ...updates } : l,
+                  ),
+                }
+              : ev,
+          ),
+        },
+      })
+    }
   }
 
   const copyLeadsToEvent = (targetEventId: string) => {
@@ -128,15 +158,38 @@ export function LeadsPage() {
           {currentLeads.map((lead) => (
             <div
               key={lead.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm"
+              className="rounded-xl bg-white/5 px-4 py-3 text-sm"
             >
-              <span className="font-semibold text-white">{lead.function}</span>
-              <Input
-                value={lead.leadName}
-                onChange={(event) => updateLead(lead.id, event.target.value)}
-                placeholder="Lead name"
-                className="max-w-xs"
-              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="font-semibold text-white">{lead.function}</span>
+                <Input
+                  value={lead.leadName}
+                  onChange={(event) => updateLead(lead.id, event.target.value)}
+                  placeholder="Lead name"
+                  className="max-w-xs"
+                />
+              </div>
+              {lead.leadName && (
+                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                  <Input
+                    value={lead.phone ?? ''}
+                    onChange={(e) => updateLeadField(lead.id, { phone: e.target.value })}
+                    placeholder="Phone"
+                    type="tel"
+                  />
+                  <Input
+                    value={lead.email ?? ''}
+                    onChange={(e) => updateLeadField(lead.id, { email: e.target.value })}
+                    placeholder="Email"
+                    type="email"
+                  />
+                  <Input
+                    value={(lead.tasks ?? []).join(', ')}
+                    onChange={(e) => updateLeadField(lead.id, { tasks: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })}
+                    placeholder="Tasks (comma-separated)"
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

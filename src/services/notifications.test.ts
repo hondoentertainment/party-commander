@@ -55,7 +55,7 @@ describe('getUpcomingReminders', () => {
       ...baseState,
       live: {
         ...baseState.live,
-        restockAlerts: { ice: true, cups: false, mixers: false, trash: true },
+        restockAlerts: { ice: true, cups: false, mixers: false, trash: true, napkins: false, bathroom: false },
       },
     }
     const reminders = getUpcomingReminders(state)

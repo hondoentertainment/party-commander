@@ -42,7 +42,8 @@ export function useNotifications() {
   useEffect(() => {
     if (!supported) return
 
-    checkReminders()
+    // Use setTimeout(0) for initial check to avoid synchronous setState in effect
+    const initialTimer = setTimeout(() => checkReminders(), 0)
 
     intervalRef.current = setInterval(() => {
       checkReminders()
@@ -52,6 +53,7 @@ export function useNotifications() {
     }, CHECK_INTERVAL_MS)
 
     return () => {
+      clearTimeout(initialTimer)
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
   }, [supported, permission, state, checkReminders])

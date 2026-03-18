@@ -38,6 +38,14 @@ export interface MenuItem {
   source: SourceType
   servings: number
   notes: string
+  /** Comma-separated allergen tags */
+  allergens?: string
+  /** Dietary restrictions this item accommodates */
+  dietary?: string[]
+  /** Comma-separated ingredients list */
+  ingredients?: string
+  /** Prep time in minutes */
+  prepTimeMins?: number
 }
 
 export interface MenuState {
@@ -75,6 +83,12 @@ export interface DrinksState {
   drinkOverrides?: Partial<Record<string, Partial<DrinkSuggestion>>>
   /** User-added custom drinks */
   customDrinks?: DrinkSuggestion[]
+  /** Cost per drink for budget tracking */
+  costPerDrink?: Record<string, number>
+  /** Batch yield (servings per batch) */
+  batchYield?: Record<string, number>
+  /** Bar layout notes */
+  barLayoutNotes?: string
 }
 
 export interface DecorItem {
@@ -88,6 +102,10 @@ export interface DecorItem {
   status: ItemStatus
   reusable: boolean
   storageNote: string
+  /** Photo reference URL or data URL */
+  photoRef?: string
+  /** Installation time as party offset hours (e.g. -3 = 3 hours before) */
+  installOffsetHours?: number
 }
 
 export interface DecorState {
@@ -128,6 +146,12 @@ export interface TimelineTask {
   title: string
   offsetHours: number
   status: ItemStatus
+  /** Task duration in minutes */
+  durationMins?: number
+  /** Lead person assigned to this task */
+  assignee?: string
+  /** Task description / details */
+  description?: string
 }
 
 export interface TimelineState {
@@ -155,6 +179,12 @@ export interface Game {
   supplies: string[]
   /** Optional link to access the game (e.g. rules page, external game) */
   link?: string
+  /** Difficulty level */
+  difficulty?: 'easy' | 'medium' | 'hard'
+  /** Minimum recommended player age */
+  minAge?: number
+  /** Alternative game if this one doesn't work */
+  alternative?: string
 }
 
 export interface GamesState {
@@ -163,10 +193,12 @@ export interface GamesState {
 
 export interface Amenity {
   id: string
-  name: 'Party Room' | 'Rooftop' | 'Grill Area' | 'My Apartment'
+  name: string
   status: 'not_checked' | 'pending' | 'reserved'
   reservationLink: string
   confirmationNote: string
+  /** Max capacity for this amenity/space */
+  capacity?: number
 }
 
 export interface PropaneStatus {
@@ -178,12 +210,30 @@ export interface PropaneStatus {
 export interface VenueState {
   amenities: Amenity[]
   propane: PropaneStatus
+  /** Parking details */
+  parkingNotes?: string
+  /** Noise restrictions / quiet hours */
+  noiseRestrictions?: string
+  /** Weather contingency plan */
+  weatherPlan?: string
+  /** Access hours */
+  accessHours?: string
 }
 
 export interface EntryState {
   instructions: string
   butterflyLink: string
   arrivalTexts: string[]
+  /** Guest check-in list */
+  guestCheckin?: GuestCheckin[]
+}
+
+export interface GuestCheckin {
+  id: string
+  name: string
+  checkedIn: boolean
+  checkinTime?: string
+  plusOnes?: number
 }
 
 export interface LiveState {
@@ -192,8 +242,11 @@ export interface LiveState {
     cups: boolean
     mixers: boolean
     trash: boolean
+    napkins: boolean
+    bathroom: boolean
   }
   quickNotes: string[]
+  guestEstimate: number
 }
 
 export interface PostPartyState {
@@ -205,6 +258,17 @@ export interface PostPartyState {
     games: string[]
     playlists: string[]
   }
+  /** Structured feedback entries */
+  feedback?: PostPartyFeedback
+  /** Actual total spent for budget reconciliation */
+  actualSpent?: number
+}
+
+export interface PostPartyFeedback {
+  whatWorked: string[]
+  whatDidnt: string[]
+  overallRating?: number
+  wouldRepeat?: boolean
 }
 
 export interface PhotoVideoShot {
@@ -213,6 +277,10 @@ export interface PhotoVideoShot {
   type: 'photo' | 'video'
   status: ItemStatus
   notes: string
+  /** Photographer/videographer assigned */
+  assignee?: string
+  /** When to take this shot relative to party start (offset hours) */
+  scheduledOffset?: number
 }
 
 export interface GalleryPhoto {
@@ -284,7 +352,8 @@ export interface PartyState {
   photoVideo: PhotoVideoState
   admin: AdminState
   auth: {
-    user: any | null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    user: any
     initialized: boolean
   }
 }
@@ -293,6 +362,12 @@ export interface LeadAssignment {
   id: string
   function: string
   leadName: string
+  /** Contact phone number */
+  phone?: string
+  /** Contact email */
+  email?: string
+  /** Tasks assigned to this lead */
+  tasks?: string[]
 }
 
 export interface PartyEvent {
@@ -310,4 +385,6 @@ export interface PartyEvent {
   leads?: LeadAssignment[]
   /** Per-event menu items */
   menuItems?: MenuItem[]
+  /** Event status */
+  status?: 'planning' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
 }

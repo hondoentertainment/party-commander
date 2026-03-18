@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useParty } from '../../state/PartyContext'
 import { v4 as uuid } from 'uuid'
+import { Sparkles } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardTitle } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
+import { generateBudgetOptimization } from '../../services/ai'
 import type { BudgetLineItem } from '../../state/types'
 
 /** Parse dollar amount from string like "$24" or "24.50" */
@@ -30,11 +32,44 @@ export function BudgetPage() {
     notes: '',
   })
 
+  const [aiTips, setAiTips] = useState<string[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+
   const manualTotal = state.budget.lineItems.reduce((sum, item) => sum + item.amount, 0)
   const decorTotal = sumDecorCosts(state.decor.items)
   const totalSpent = manualTotal + decorTotal
   const limit = state.budget.limit ?? 0
   const overBudget = limit > 0 && totalSpent > limit
+
+  const runAiOptimize = async () => {
+    setAiLoading(true)
+    try {
+      const tips = await generateBudgetOptimization(state.budget.lineItems, state.budget.limit)
+      setAiTips(tips)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const exportCsv = () => {
+    const rows = [
+      ['Label', 'Category', 'Amount', 'Notes'],
+      ...state.budget.lineItems.map((item) => [
+        item.label,
+        item.category,
+        item.amount.toFixed(2),
+        item.notes ?? '',
+      ]),
+    ]
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'budget.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const addLineItem = () => {
     if (!draft.label.trim() && draft.amount <= 0) return
@@ -126,6 +161,66 @@ export function BudgetPage() {
           </label>
         </div>
       </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>Tools</CardTitle>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={runAiOptimize}
+            disabled={aiLoading || state.budget.lineItems.length === 0}
+          >
+            <Sparkles className="mr-2 size-4" />
+            {aiLoading ? 'Optimizing...' : 'AI Optimize'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={exportCsv}
+            disabled={state.budget.lineItems.length === 0}
+          >
+            Export CSV
+          </Button>
+        </div>
+        {aiTips.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs font-bold uppercase text-emerald-400">AI Suggestions</p>
+            {aiTips.map((tip, i) => (
+              <p key={i} className="rounded-lg bg-emerald-500/5 px-3 py-2 text-sm text-emerald-200">
+                {tip}
+              </p>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {state.budget.lineItems.length > 0 && (
+        <Card>
+          <CardTitle>Category Breakdown</CardTitle>
+          <div className="mt-4 space-y-2">
+            {Object.entries(
+              state.budget.lineItems.reduce<Record<string, number>>((acc, item) => {
+                acc[item.category] = (acc[item.category] ?? 0) + item.amount
+                return acc
+              }, {}),
+            ).map(([cat, amount]) => (
+              <div key={cat} className="flex items-center gap-3 text-sm">
+                <span className="w-20 capitalize text-slate-400">{cat}</span>
+                <div className="flex-1 rounded-full bg-white/5">
+                  <div
+                    className="h-2 rounded-full bg-emerald-500"
+                    style={{ width: `${Math.min(100, (amount / totalSpent) * 100)}%` }}
+                  />
+                </div>
+                <span className="w-16 text-right text-slate-300">${amount.toFixed(0)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <CardTitle>Add line item</CardTitle>

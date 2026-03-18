@@ -34,12 +34,12 @@ describe('Navigation', () => {
     expect(homeLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('shows aria-current on Budget when on /budget', () => {
+  it('shows aria-current on Budget when on /event/:id/budget', () => {
     render(
       <PartyProvider>
-        <MemoryRouter initialEntries={['/budget']}>
+        <MemoryRouter initialEntries={['/event/test-party/budget']}>
           <Routes>
-            <Route path="/budget" element={<Navigation layout="sidebar" />} />
+            <Route path="/event/:eventId/budget" element={<Navigation layout="sidebar" />} />
           </Routes>
         </MemoryRouter>
       </PartyProvider>

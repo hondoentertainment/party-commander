@@ -30,6 +30,9 @@ export function GamesPage() {
     rules: '',
     supplies: '',
     link: '',
+    difficulty: 'medium' as 'easy' | 'medium' | 'hard',
+    minAge: undefined as number | undefined,
+    alternative: '',
   })
 
   const addGame = () => {
@@ -51,6 +54,9 @@ export function GamesPage() {
               .map((item) => item.trim())
               .filter(Boolean),
             link: draft.link.trim() || undefined,
+            difficulty: draft.difficulty,
+            minAge: draft.minAge,
+            alternative: draft.alternative.trim() || undefined,
           },
         ],
       },
@@ -63,6 +69,9 @@ export function GamesPage() {
       rules: '',
       supplies: '',
       link: '',
+      difficulty: 'medium',
+      minAge: undefined,
+      alternative: '',
     })
   }
 
@@ -144,6 +153,29 @@ export function GamesPage() {
               placeholder="Each person shares two truths and one lie..."
             />
           </label>
+          <label className="text-sm text-slate-300">
+            Difficulty
+            <Select
+              value={draft.difficulty}
+              onChange={(event) => setDraft({ ...draft, difficulty: event.target.value as 'easy' | 'medium' | 'hard' })}
+              className="mt-2"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </Select>
+          </label>
+          <label className="text-sm text-slate-300">
+            Min age
+            <Input
+              type="number"
+              min={0}
+              value={draft.minAge ?? ''}
+              onChange={(event) => setDraft({ ...draft, minAge: Number(event.target.value) || undefined })}
+              className="mt-2"
+              placeholder="e.g. 18"
+            />
+          </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Supplies (comma separated)
             <Input
@@ -151,6 +183,15 @@ export function GamesPage() {
               onChange={(event) => setDraft({ ...draft, supplies: event.target.value })}
               className="mt-2"
               placeholder="Cards, markers"
+            />
+          </label>
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Alternative game (if this one falls flat)
+            <Input
+              value={draft.alternative}
+              onChange={(event) => setDraft({ ...draft, alternative: event.target.value })}
+              className="mt-2"
+              placeholder="e.g. Switch to charades"
             />
           </label>
           <label className="text-sm text-slate-300 md:col-span-2">
@@ -182,12 +223,19 @@ export function GamesPage() {
                     <p className="font-semibold text-white">{game.name}</p>
                     <p className="text-xs uppercase text-slate-400">
                       {game.category} · {game.durationMins} mins · {game.groupSize}
+                      {game.difficulty && game.difficulty !== 'medium' ? ` · ${game.difficulty}` : ''}
+                      {game.minAge ? ` · ${game.minAge}+` : ''}
                     </p>
                     {game.supplies.length ? (
                       <p className="mt-2 text-xs text-slate-400">
                         Supplies: {game.supplies.join(', ')}
                       </p>
                     ) : null}
+                    {game.alternative && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Alt: {game.alternative}
+                      </p>
+                    )}
                     <label className="mt-2 block">
                       <span className="text-xs text-slate-500">Game link (for QR code)</span>
                       <Input

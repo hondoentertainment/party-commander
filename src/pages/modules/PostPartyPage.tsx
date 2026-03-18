@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useParty } from '../../state/PartyContext'
+import { Star } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardTitle } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Input } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
 import { Textarea } from '../../components/ui/Textarea'
+import { cn } from '../../components/ui/utils'
 
 const PLAYLIST_PHASES = [
   { key: 'pregame' as const, label: 'Pregame' },
@@ -24,6 +27,8 @@ export function PostPartyPage() {
   const [confirmingRemove, setConfirmingRemove] = useState<PostPartyConfirming>(null)
   const [cleanupItem, setCleanupItem] = useState('')
   const [leftoverItem, setLeftoverItem] = useState('')
+  const [feedbackDraft, setFeedbackDraft] = useState('')
+  const [feedbackType, setFeedbackType] = useState<'worked' | 'didnt'>('worked')
 
   const toggleFavoriteDrink = (drinkId: string) => {
     const favs = state.postParty.favorites.drinks
@@ -267,6 +272,195 @@ export function PostPartyPage() {
       </Card>
 
       <Card>
+        <CardTitle>Structured Feedback</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Capture specific wins and areas to improve.</p>
+        <div className="mt-4 flex gap-2">
+          <Select
+            value={feedbackType}
+            onChange={(e) => { setFeedbackType(e.target.value as 'worked' | 'didnt') }}
+            className="w-36 text-xs"
+          >
+            <option value="worked">What worked</option>
+            <option value="didnt">What didn&apos;t</option>
+          </Select>
+          <Input
+            value={feedbackDraft}
+            onChange={(e) => setFeedbackDraft(e.target.value)}
+            className="flex-1"
+            placeholder={feedbackType === 'worked' ? 'e.g. Signature cocktails were a hit' : 'e.g. Ran out of ice early'}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && feedbackDraft.trim()) {
+                const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                dispatch({
+                  type: 'update_post_party',
+                  payload: {
+                    feedback: feedbackType === 'worked'
+                      ? { ...feedback, whatWorked: [...feedback.whatWorked, feedbackDraft.trim()] }
+                      : { ...feedback, whatDidnt: [...feedback.whatDidnt, feedbackDraft.trim()] },
+                  },
+                })
+                setFeedbackDraft('')
+              }
+            }}
+          />
+          <Button
+            type="button"
+            onClick={() => {
+              if (!feedbackDraft.trim()) return
+              const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+              dispatch({
+                type: 'update_post_party',
+                payload: {
+                  feedback: feedbackType === 'worked'
+                    ? { ...feedback, whatWorked: [...feedback.whatWorked, feedbackDraft.trim()] }
+                    : { ...feedback, whatDidnt: [...feedback.whatDidnt, feedbackDraft.trim()] },
+                },
+              })
+              setFeedbackDraft('')
+            }}
+          >
+            Add
+          </Button>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase text-emerald-400">What worked</p>
+            <ul className="space-y-1">
+              {(state.postParty.feedback?.whatWorked ?? []).map((item, i) => (
+                <li key={i} className="flex items-center justify-between rounded-lg bg-emerald-500/5 px-3 py-1.5 text-sm text-emerald-200">
+                  {item}
+                  <button
+                    type="button"
+                    className="text-xs text-slate-500 hover:text-white"
+                    onClick={() => {
+                      const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                      dispatch({
+                        type: 'update_post_party',
+                        payload: {
+                          feedback: { ...feedback, whatWorked: feedback.whatWorked.filter((_, idx) => idx !== i) },
+                        },
+                      })
+                    }}
+                  >
+                    x
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase text-rose-400">What didn&apos;t</p>
+            <ul className="space-y-1">
+              {(state.postParty.feedback?.whatDidnt ?? []).map((item, i) => (
+                <li key={i} className="flex items-center justify-between rounded-lg bg-rose-500/5 px-3 py-1.5 text-sm text-rose-200">
+                  {item}
+                  <button
+                    type="button"
+                    className="text-xs text-slate-500 hover:text-white"
+                    onClick={() => {
+                      const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                      dispatch({
+                        type: 'update_post_party',
+                        payload: {
+                          feedback: { ...feedback, whatDidnt: feedback.whatDidnt.filter((_, idx) => idx !== i) },
+                        },
+                      })
+                    }}
+                  >
+                    x
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Budget Reconciliation</CardTitle>
+        <p className="mt-1 text-xs text-slate-400">Compare planned vs actual spend.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-xs text-slate-400">Planned</p>
+            <p className="text-xl font-bold text-white">
+              ${state.budget.lineItems.reduce((s, i) => s + i.amount, 0).toFixed(0)}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-xs text-slate-400">Actual</p>
+            <Input
+              type="number"
+              min={0}
+              value={state.postParty.actualSpent ?? ''}
+              onChange={(e) =>
+                dispatch({ type: 'update_post_party', payload: { actualSpent: Number(e.target.value) || undefined } })
+              }
+              className="mt-1 text-center text-lg font-bold"
+              placeholder="$0"
+            />
+          </div>
+          <div className="rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-xs text-slate-400">Difference</p>
+            {state.postParty.actualSpent != null ? (
+              <p className={cn(
+                'text-xl font-bold',
+                state.postParty.actualSpent <= state.budget.lineItems.reduce((s, i) => s + i.amount, 0) ? 'text-emerald-400' : 'text-rose-400',
+              )}>
+                {state.postParty.actualSpent <= state.budget.lineItems.reduce((s, i) => s + i.amount, 0) ? '-' : '+'}
+                ${Math.abs(state.postParty.actualSpent - state.budget.lineItems.reduce((s, i) => s + i.amount, 0)).toFixed(0)}
+              </p>
+            ) : (
+              <p className="text-xl font-bold text-slate-600">&mdash;</p>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Overall Rating</CardTitle>
+        <div className="mt-4 flex items-center gap-4">
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+                  dispatch({
+                    type: 'update_post_party',
+                    payload: { feedback: { ...feedback, overallRating: n } },
+                  })
+                }}
+                className={cn(
+                  'text-2xl transition',
+                  (state.postParty.feedback?.overallRating ?? 0) >= n ? 'text-yellow-400' : 'text-slate-700',
+                )}
+              >
+                <Star className={cn('size-7', (state.postParty.feedback?.overallRating ?? 0) >= n ? 'fill-yellow-400' : '')} />
+              </button>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              'text-xs',
+              state.postParty.feedback?.wouldRepeat ? 'bg-emerald-500/20 text-emerald-200' : '',
+            )}
+            onClick={() => {
+              const feedback = state.postParty.feedback ?? { whatWorked: [], whatDidnt: [] }
+              dispatch({
+                type: 'update_post_party',
+                payload: { feedback: { ...feedback, wouldRepeat: !feedback.wouldRepeat } },
+              })
+            }}
+          >
+            {state.postParty.feedback?.wouldRepeat ? '\u2713 Would repeat' : 'Would repeat?'}
+          </Button>
+        </div>
+      </Card>
+
+      <Card>
         <CardTitle>Notes</CardTitle>
         <Textarea
           value={state.postParty.notes}
@@ -275,7 +469,7 @@ export function PostPartyPage() {
           }
           rows={4}
           className="mt-3"
-          placeholder="What worked? What didn't?"
+          placeholder="General notes and reflections"
         />
       </Card>
     </div>

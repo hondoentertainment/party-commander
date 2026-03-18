@@ -7,6 +7,7 @@ import { Card, CardTitle } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
+import { Textarea } from '../../components/ui/Textarea'
 import { ImagePlus, Trash2, RotateCcw } from 'lucide-react'
 import { getShoppingListItems } from '../../state/engines'
 import type { DrinkSuggestion, ShoppingListBaseKey } from '../../state/types'
@@ -25,6 +26,7 @@ export function DrinksPage() {
   const customDrinks = state.drinks.customDrinks ?? []
   const drinkOverrides = state.drinks.drinkOverrides ?? {}
   const quantities = state.drinks.quantities ?? []
+  const allDrinks: DrinkSuggestion[] = [...state.drinks.suggestions, ...customDrinks]
 
   const isCustomDrink = (drinkId: string) => customDrinks.some((d) => d.id === drinkId)
   const hasOverride = (drinkId: string) => drinkId in drinkOverrides
@@ -401,6 +403,74 @@ export function DrinksPage() {
             </table>
           </div>
         )}
+      </Card>
+
+      {allDrinks.length > 0 && (
+        <Card>
+          <CardTitle>Cost & Yield Tracker</CardTitle>
+          <p className="mt-1 text-xs text-slate-400">Track cost per drink and batch yields for budgeting.</p>
+          <div className="mt-4 space-y-2">
+            {allDrinks.map((drink) => {
+              const costPerDrink = state.drinks.costPerDrink?.[drink.id] ?? 0
+              const batchYield = state.drinks.batchYield?.[drink.id] ?? 0
+              return (
+                <div key={`cost-${drink.id}`} className="flex flex-wrap items-center gap-3 rounded-xl bg-white/5 px-4 py-2 text-sm">
+                  <span className="min-w-[8rem] font-medium text-slate-300">{drink.name}</span>
+                  <label className="flex items-center gap-1 text-xs text-slate-400">
+                    $/drink
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={costPerDrink || ''}
+                      onChange={(e) =>
+                        dispatch({
+                          type: 'update_drinks',
+                          payload: {
+                            costPerDrink: { ...state.drinks.costPerDrink, [drink.id]: Number(e.target.value) || 0 },
+                          },
+                        })
+                      }
+                      className="w-20"
+                      placeholder="0"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1 text-xs text-slate-400">
+                    Batch yield
+                    <Input
+                      type="number"
+                      min={0}
+                      value={batchYield || ''}
+                      onChange={(e) =>
+                        dispatch({
+                          type: 'update_drinks',
+                          payload: {
+                            batchYield: { ...state.drinks.batchYield, [drink.id]: Number(e.target.value) || 0 },
+                          },
+                        })
+                      }
+                      className="w-20"
+                      placeholder="0"
+                    />
+                  </label>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <CardTitle>Bar Layout Notes</CardTitle>
+        <Textarea
+          value={state.drinks.barLayoutNotes ?? ''}
+          onChange={(e) =>
+            dispatch({ type: 'update_drinks', payload: { barLayoutNotes: e.target.value } })
+          }
+          rows={3}
+          className="mt-3"
+          placeholder="Describe your bar setup: ice station placement, drink stations, garnish area..."
+        />
       </Card>
 
       <ConfirmDialog

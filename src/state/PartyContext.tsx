@@ -261,7 +261,7 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
       // Fallback: create locally
       const id = uuid()
       const now = new Date().toISOString()
-      const { auth: _a, ...stateForStore } = initialState
+      const { auth: _omitAuth, ...stateForStore } = initialState
       const row: PartyRow = {
         id,
         party_profile_id: localOwnerKey,
@@ -417,7 +417,7 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
       if (isLocalParty(currentPartyId)) {
-        const { auth: _a, ...rest } = state
+        const { auth: _omitAuth2, ...rest } = state
         updateLocalParty(currentPartyId, rest)
       } else {
         PartyService.update(currentPartyId, state).catch(console.error)
