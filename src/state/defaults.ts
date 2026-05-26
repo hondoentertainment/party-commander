@@ -1,4 +1,22 @@
-import type { LeadAssignment, PartyState, Theme } from './types'
+import type { CleaningChecklist, LeadAssignment, PartyState, Theme } from './types'
+
+/** Default cleaning checklist items by phase */
+export const defaultCleaningChecklists: CleaningChecklist[] = [
+  { id: 'before-1', label: 'Vacuum and dust', phase: 'before', status: 'not_started' },
+  { id: 'before-2', label: 'Clear clutter and put away valuables', phase: 'before', status: 'not_started' },
+  { id: 'before-3', label: 'Stock bathroom supplies', phase: 'before', status: 'not_started' },
+  { id: 'before-4', label: 'Set up trash cans with liners', phase: 'before', status: 'not_started' },
+  { id: 'before-5', label: 'Prepare hand towels and napkins', phase: 'before', status: 'not_started' },
+  { id: 'during-1', label: 'Wipe down bathroom surfaces', phase: 'during', status: 'not_started' },
+  { id: 'during-2', label: 'Empty trash if getting full', phase: 'during', status: 'not_started' },
+  { id: 'during-3', label: 'Refresh hand soap and paper products', phase: 'during', status: 'not_started' },
+  { id: 'during-4', label: 'Quick sweep of high-traffic areas', phase: 'during', status: 'not_started' },
+  { id: 'after-1', label: 'Collect and take out trash', phase: 'after', status: 'not_started' },
+  { id: 'after-2', label: 'Wipe down surfaces and tables', phase: 'after', status: 'not_started' },
+  { id: 'after-3', label: 'Vacuum or sweep floors', phase: 'after', status: 'not_started' },
+  { id: 'after-4', label: 'Restock bathroom for next day', phase: 'after', status: 'not_started' },
+  { id: 'after-5', label: 'Put away decorations and supplies', phase: 'after', status: 'not_started' },
+]
 
 const defaultTheme: Theme = 'Classic'
 
@@ -64,7 +82,7 @@ export const defaultPartyState: PartyState = {
     items: [],
   },
   cleaning: {
-    checklists: [],
+    checklists: defaultCleaningChecklists,
     bathroomExtras: [],
     bathroomSupplies: [
       { id: 'tp', name: 'Toilet paper', status: 'not_started' },

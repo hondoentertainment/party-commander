@@ -34,18 +34,18 @@ describe('Navigation', () => {
     expect(homeLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('shows aria-current on Budget when on /budget', () => {
+  it('shows aria-current on Events when on /events', () => {
     render(
       <PartyProvider>
-        <MemoryRouter initialEntries={['/budget']}>
+        <MemoryRouter initialEntries={['/events']}>
           <Routes>
-            <Route path="/budget" element={<Navigation layout="sidebar" />} />
+            <Route path="/events" element={<Navigation layout="sidebar" />} />
           </Routes>
         </MemoryRouter>
       </PartyProvider>
     )
-    const budgetLink = screen.getByRole('link', { name: /budget/i })
-    expect(budgetLink).toHaveAttribute('aria-current', 'page')
+    const eventsLink = screen.getByRole('link', { name: /events/i })
+    expect(eventsLink).toHaveAttribute('aria-current', 'page')
   })
 
   it('shows labels on mobile layout', () => {

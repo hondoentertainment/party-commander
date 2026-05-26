@@ -13,6 +13,7 @@ import { supabase } from '../services/auth'
 import { PartyProfileService, type PartyProfile } from '../services/partyProfile'
 import { PartyService, type PartyRow } from '../services/parties'
 import { EventService } from '../services/events'
+import { useToast } from '../context/ToastContext'
 import { applyEngines } from './engines'
 import { defaultPartyState } from './defaults'
 import { getLastPartyId, getLocalParties, addLocalParty, updateLocalParty, isLocalParty, loadState, saveState, setLastPartyId } from './storage'
@@ -173,6 +174,7 @@ type PartyContextValue = {
 const PartyContext = createContext<PartyContextValue | null>(null)
 
 export function PartyProvider({ children }: { children: React.ReactNode }) {
+  const { addToast } = useToast()
   const [partyProfile, setPartyProfile] = useState<PartyProfile | null>(null)
   const [currentPartyId, setCurrentPartyId] = useState<string | null>(null)
   const [parties, setParties] = useState<PartyRow[]>([])
@@ -183,6 +185,16 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
     const stored = loadState()
     return mergeStoredWithDefaults(stored)
   })
+
+  const restockAlertsRef = useRef(state.live.restockAlerts)
+  restockAlertsRef.current = state.live.restockAlerts
+
+  const RESTOCK_LABELS: Record<string, string> = {
+    ice: 'Ice',
+    cups: 'Cups',
+    mixers: 'Mixers',
+    trash: 'Trash',
+  }
 
   const refreshParties = useCallback(async () => {
     const user = state.auth.user as { id: string } | null
@@ -420,8 +432,14 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
         const { auth: _a, ...rest } = state
         updateLocalParty(currentPartyId, rest)
       } else {
-        PartyService.update(currentPartyId, state).catch(console.error)
-        EventService.sync(currentPartyId, state.events.items).catch(console.error)
+        PartyService.update(currentPartyId, state).catch((err) => {
+          console.error('PartyService.update failed:', err)
+          addToast('Could not save – check connection', 'error')
+        })
+        EventService.sync(currentPartyId, state.events.items).catch((err) => {
+          console.error('EventService.sync failed:', err)
+          addToast('Could not sync events', 'error')
+        })
       }
       saveTimeoutRef.current = null
     }, 1000)
@@ -429,7 +447,60 @@ export function PartyProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [state, currentPartyId, state.auth.user])
+  }, [state, currentPartyId, state.auth.user, addToast])
+
+  // Supabase Realtime: subscribe to party updates from co-hosts for live restock alerts
+  useEffect(() => {
+    if (!currentPartyId || isLocalParty(currentPartyId) || !state.auth.user) return
+
+    const channel = supabase
+      .channel(`party:${currentPartyId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'parties',
+          filter: `id=eq.${currentPartyId}`,
+        },
+        (payload) => {
+          const row = payload.new as PartyRow | undefined
+          const remoteState = row?.state as { live?: { restockAlerts?: Record<string, boolean> } } | undefined
+          const newAlerts = remoteState?.live?.restockAlerts
+
+          if (!newAlerts || typeof newAlerts !== 'object') return
+
+          const prevAlerts = restockAlertsRef.current
+          const merged = { ...prevAlerts, ...newAlerts }
+
+          const prevMap = prevAlerts as Record<string, boolean>
+          const newlySet = (Object.keys(newAlerts) as (keyof typeof prevAlerts)[]).filter(
+            (key) => newAlerts[key] === true && prevMap[key] === false,
+          )
+
+          if (newlySet.length > 0) {
+            dispatch({
+              type: 'update_live',
+              payload: { restockAlerts: merged },
+            })
+            for (const key of newlySet) {
+              const label = RESTOCK_LABELS[key] ?? key
+              addToast(`Co-host marked ${label} needs restocking`, 'info')
+            }
+          } else if (JSON.stringify(merged) !== JSON.stringify(prevAlerts)) {
+            dispatch({
+              type: 'update_live',
+              payload: { restockAlerts: merged },
+            })
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [currentPartyId, state.auth.user, addToast])
 
   const value = useMemo(
     () => ({

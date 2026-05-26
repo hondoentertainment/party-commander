@@ -1,9 +1,34 @@
 import { createClient } from '@supabase/supabase-js'
 
+const PLACEHOLDER_URL = 'https://placeholder.supabase.co'
+const PLACEHOLDER_KEY = 'placeholder-key'
+
+/** Returns true if Supabase is properly configured; false if placeholders/missing */
+export function validateSupabaseConfig(): boolean {
+  const url = import.meta.env.VITE_SUPABASE_URL
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const isPlaceholder =
+    !url ||
+    !key ||
+    url === PLACEHOLDER_URL ||
+    key === PLACEHOLDER_KEY ||
+    url.trim() === '' ||
+    key.trim() === ''
+  if (isPlaceholder) {
+    const msg =
+      '[Party Command Center] Supabase auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env. Auth features will not work.'
+    console.warn(msg)
+    return false
+  }
+  return true
+}
+
 // World-class security configuration
-// In a production environment, these would be retrieved from VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co'
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || PLACEHOLDER_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || PLACEHOLDER_KEY
+
+// Validate on module load so developers see issues early
+validateSupabaseConfig()
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {

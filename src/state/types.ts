@@ -217,7 +217,12 @@ export interface PhotoVideoShot {
 
 export interface GalleryPhoto {
   id: string
-  dataUrl: string
+  /** @deprecated Use storagePath + url for new uploads. Kept for backward compatibility. */
+  dataUrl?: string
+  /** Storage path in Supabase (e.g. partyId/photoId.jpg) */
+  storagePath?: string
+  /** Public URL from Supabase Storage */
+  url?: string
   caption: string
   addedAt: string
   filename: string

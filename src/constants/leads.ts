@@ -1,0 +1,18 @@
+export const DEFAULT_LEADS = [
+  { id: 'budget', function: 'Budget', leadName: '' },
+  { id: 'invites', function: 'Invites', leadName: '' },
+  { id: 'events', function: 'Events', leadName: '' },
+  { id: 'leads', function: 'Leads', leadName: '' },
+  { id: 'food', function: 'Food', leadName: '' },
+  { id: 'drinks', function: 'Drinks', leadName: '' },
+  { id: 'decor', function: 'Decor & Ambience', leadName: '' },
+  { id: 'cleaning', function: 'Cleaning & Bathroom', leadName: '' },
+  { id: 'timeline', function: 'Timeline & Calendar', leadName: '' },
+  { id: 'music', function: 'Music Hub', leadName: '' },
+  { id: 'games', function: 'Game Generator', leadName: '' },
+  { id: 'venue', function: 'Venue & Rooftop', leadName: '' },
+  { id: 'entry', function: 'Entry Mode', leadName: '' },
+  { id: 'live', function: 'Live Party', leadName: '' },
+  { id: 'post_party', function: 'Post-Party Wrap', leadName: '' },
+  { id: 'photo_video', function: 'Photo/Video Shoot', leadName: '' },
+] as const

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useParty } from '../state/PartyContext'
 import { cn } from '../components/ui/utils'
@@ -16,276 +16,19 @@ import {
   Trash2,
   Sparkles,
   RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays,
+  Music2,
 } from 'lucide-react'
-import {
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  format,
-  isSameMonth,
-  isSameDay,
-  differenceInDays,
-  parseISO,
-  isBefore,
-  startOfDay,
-} from 'date-fns'
+import { SpotifyEmbedModal, type SpotifyTarget } from '../components/SpotifyEmbedModal'
+import { AuthService } from '../services/auth'
+import { uploadPartyPhoto, deletePartyPhoto, getPhotoPublicUrl } from '../services/photoStorage'
+import { isLocalParty } from '../state/storage'
+import { parseISO, isBefore, startOfDay } from 'date-fns'
 import { getShoppingListItems } from '../state/engines'
+import { spotifyUrlToEmbed, isSpotifyUrl } from '../utils/spotify'
 import type { DrinkSuggestion, GalleryPhoto, ShoppingListBaseKey } from '../state/types'
-import type { BudgetLineItem, Theme } from '../state/types'
+import type { Theme } from '../state/types'
 
-/** Parse dollar amount from string like "$24" or "24.50" */
-function parseCost(value: string): number {
-  const cleaned = String(value).replace(/[$,]/g, '').trim()
-  const n = parseFloat(cleaned)
-  return Number.isFinite(n) ? n : 0
-}
-
-/** Sum decor costs for display */
-function sumDecorCosts(decorItems: { cost: string }[]): number {
-  return decorItems.reduce((sum, item) => sum + parseCost(item.cost), 0)
-}
-
-export function BudgetPage() {
-  const { state, dispatch } = useParty()
-  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; label: string } | null>(null)
-  const [draft, setDraft] = useState({
-    label: '',
-    category: 'decor' as BudgetLineItem['category'],
-    amount: 0,
-    notes: '',
-  })
-
-  const manualTotal = state.budget.lineItems.reduce((sum, item) => sum + item.amount, 0)
-  const decorTotal = sumDecorCosts(state.decor.items)
-  const totalSpent = manualTotal + decorTotal
-  const limit = state.budget.limit ?? 0
-  const overBudget = limit > 0 && totalSpent > limit
-
-  const addLineItem = () => {
-    if (!draft.label.trim() && draft.amount <= 0) return
-    dispatch({
-      type: 'update_budget',
-      payload: {
-        lineItems: [
-          ...state.budget.lineItems,
-          {
-            id: uuid(),
-            label: draft.label.trim() || 'Misc',
-            category: draft.category,
-            amount: draft.amount,
-            notes: draft.notes.trim() || undefined,
-          },
-        ],
-      },
-    })
-    setDraft({ label: '', category: 'decor', amount: 0, notes: '' })
-  }
-
-  const removeLineItem = (id: string) => {
-    dispatch({
-      type: 'update_budget',
-      payload: {
-        lineItems: state.budget.lineItems.filter((item) => item.id !== id),
-      },
-    })
-  }
-  const doRemoveLineItem = (id: string) => {
-    removeLineItem(id)
-    setConfirmingRemove(null)
-  }
-
-  const updateLineItem = (
-    id: string,
-    updates: Partial<BudgetLineItem>,
-  ) => {
-    dispatch({
-      type: 'update_budget',
-      payload: {
-        lineItems: state.budget.lineItems.map((item) =>
-          item.id === id ? { ...item, ...updates } : item,
-        ),
-      },
-    })
-  }
-
-  return (
-    <div className="space-y-6 pb-20 md:pb-0">
-      <h2 className="text-2xl font-semibold text-white">Budget</h2>
-      <p className="text-sm text-slate-300">
-        Track costs per category. Decor costs are automatically synced from the Decor module.
-      </p>
-
-      <Card>
-        <CardTitle>Totals</CardTitle>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl bg-white/5 p-4">
-            <p className="text-xs uppercase text-slate-400">Total spent</p>
-            <p className="text-2xl font-bold text-white">
-              ${totalSpent.toFixed(2)}
-            </p>
-            <p className="mt-2 text-xs text-slate-400">
-              Manual: ${manualTotal.toFixed(2)} · Decor: ${decorTotal.toFixed(2)}
-            </p>
-          </div>
-          <label className="text-sm text-slate-300">
-            Budget limit (optional)
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={state.budget.limit ?? ''}
-              onChange={(e) =>
-                dispatch({
-                  type: 'update_budget',
-                  payload: {
-                    limit: e.target.value ? Number(e.target.value) : undefined,
-                  },
-                })
-              }
-              className="mt-2"
-              placeholder="e.g. 500"
-            />
-            {overBudget && limit > 0 ? (
-              <p className="mt-2 text-sm text-rose-400">Over budget by ${(totalSpent - limit).toFixed(2)}</p>
-            ) : null}
-          </label>
-        </div>
-      </Card>
-
-      <Card>
-        <CardTitle>Add line item</CardTitle>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-300">
-            Label
-            <Input
-              value={draft.label}
-              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-              className="mt-2"
-              placeholder="Ice, cups, napkins"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Category
-            <Select
-              value={draft.category}
-              onChange={(e) =>
-                setDraft({ ...draft, category: e.target.value as BudgetLineItem['category'] })
-              }
-              className="mt-2"
-            >
-              <option value="decor">Decor</option>
-              <option value="food">Food</option>
-              <option value="drinks">Drinks</option>
-              <option value="venue">Venue</option>
-              <option value="supplies">Supplies</option>
-              <option value="other">Other</option>
-            </Select>
-          </label>
-          <label className="text-sm text-slate-300">
-            Amount ($)
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={draft.amount || ''}
-              onChange={(e) =>
-                setDraft({ ...draft, amount: Number(e.target.value) || 0 })
-              }
-              className="mt-2"
-              placeholder="24.99"
-            />
-          </label>
-          <label className="text-sm text-slate-300 md:col-span-2">
-            Notes
-            <Input
-              value={draft.notes}
-              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-              className="mt-2"
-              placeholder="Optional"
-            />
-          </label>
-        </div>
-        <Button type="button" onClick={addLineItem} className="mt-4">
-          Add item
-        </Button>
-      </Card>
-
-      <Card>
-        <CardTitle>Line items</CardTitle>
-        {state.budget.lineItems.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No line items yet. Add costs above.</p>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {state.budget.lineItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  <Input
-                    value={item.label}
-                    onChange={(e) => updateLineItem(item.id, { label: e.target.value })}
-                    className="max-w-[200px]"
-                  />
-                  <Select
-                    value={item.category}
-                    onChange={(e) =>
-                      updateLineItem(item.id, {
-                        category: e.target.value as BudgetLineItem['category'],
-                      })
-                    }
-                    className="w-32"
-                  >
-                    <option value="decor">Decor</option>
-                    <option value="food">Food</option>
-                    <option value="drinks">Drinks</option>
-                    <option value="venue">Venue</option>
-                    <option value="supplies">Supplies</option>
-                    <option value="other">Other</option>
-                  </Select>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.amount || ''}
-                    onChange={(e) =>
-                      updateLineItem(item.id, { amount: Number(e.target.value) || 0 })
-                    }
-                    className="w-24"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => setConfirmingRemove({ id: item.id, label: item.label })}
-                  variant="outline"
-                  className="px-3 py-1 text-xs"
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-      <ConfirmDialog
-        open={!!confirmingRemove}
-        onClose={() => setConfirmingRemove(null)}
-        onConfirm={() => { if (confirmingRemove) doRemoveLineItem(confirmingRemove.id) }}
-        title="Remove line item"
-        description={
-          confirmingRemove
-            ? `Remove "${confirmingRemove.label}"? This cannot be undone.`
-            : ''
-        }
-      />
-    </div>
-  )
-}
+export { BudgetPage } from './modules/BudgetPage'
 
 const PARTY_CONCEPTS: Theme[] = [
   'Classic',
@@ -1805,832 +1548,43 @@ export function DrinksPage() {
   )
 }
 
-export function DecorPage() {
-  const { state, dispatch } = useParty()
-  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
-  const [draft, setDraft] = useState({
-    name: '',
-    zone: 'entry' as const,
-    quantity: 1,
-    buyLink: '',
-    eta: '',
-    cost: '',
-    status: 'not_started' as const,
-    reusable: false,
-    storageNote: '',
-  })
+export { DecorPage } from './modules/DecorPage'
+export { CleaningPage } from './modules/CleaningPage'
 
-  const addItem = () => {
-    if (!draft.name.trim()) return
-    dispatch({
-      type: 'update_decor',
-      payload: {
-        items: [
-          ...state.decor.items,
-          {
-            id: uuid(),
-            name: draft.name.trim(),
-            zone: draft.zone,
-            quantity: draft.quantity,
-            buyLink: draft.buyLink.trim(),
-            eta: draft.eta.trim(),
-            cost: draft.cost.trim(),
-            status: draft.status,
-            reusable: draft.reusable,
-            storageNote: draft.storageNote.trim(),
-          },
-        ],
-      },
-    })
-    setDraft({
-      name: '',
-      zone: 'entry',
-      quantity: 1,
-      buyLink: '',
-      eta: '',
-      cost: '',
-      status: 'not_started',
-      reusable: false,
-      storageNote: '',
-    })
-  }
 
-  const removeItem = (id: string) => {
-    dispatch({
-      type: 'update_decor',
-      payload: { items: state.decor.items.filter((item) => item.id !== id) },
-    })
-  }
-
-  return (
-    <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-2xl font-semibold text-white">Decor & Ambience</h3>
-      <p className="text-sm text-slate-300">Track decor by zone with status and storage notes.</p>
-
-      <Card>
-        <CardTitle>Add decor item</CardTitle>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm text-slate-300">
-            Item
-            <Input
-              value={draft.name}
-              onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              className="mt-2"
-              placeholder="String lights"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Zone
-            <Select
-              value={draft.zone}
-              onChange={(event) =>
-                setDraft({ ...draft, zone: event.target.value as typeof draft.zone })
-              }
-              className="mt-2"
-            >
-              <option value="entry">Entry</option>
-              <option value="living_room">Living room</option>
-              <option value="table">Table</option>
-              <option value="lighting">Lighting</option>
-              <option value="bathroom">Bathroom</option>
-            </Select>
-          </label>
-          <label className="text-sm text-slate-300">
-            Quantity
-            <Input
-              type="number"
-              min={1}
-              value={draft.quantity}
-              onChange={(event) =>
-                setDraft({ ...draft, quantity: Number(event.target.value) })
-              }
-              className="mt-2"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Status
-            <Select
-              value={draft.status}
-              onChange={(event) =>
-                setDraft({ ...draft, status: event.target.value as typeof draft.status })
-              }
-              className="mt-2"
-            >
-              <option value="not_started">Not started</option>
-              <option value="in_progress">In progress</option>
-              <option value="done">Done</option>
-            </Select>
-          </label>
-          <label className="text-sm text-slate-300">
-            Buy link
-            <Input
-              value={draft.buyLink}
-              onChange={(event) => setDraft({ ...draft, buyLink: event.target.value })}
-              className="mt-2"
-              placeholder="https://..."
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            ETA
-            <Input
-              value={draft.eta}
-              onChange={(event) => setDraft({ ...draft, eta: event.target.value })}
-              className="mt-2"
-              placeholder="Arrives Wed"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Cost
-            <Input
-              value={draft.cost}
-              onChange={(event) => setDraft({ ...draft, cost: event.target.value })}
-              className="mt-2"
-              placeholder="$24"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Reusable
-            <Select
-              value={draft.reusable ? 'yes' : 'no'}
-              onChange={(event) => setDraft({ ...draft, reusable: event.target.value === 'yes' })}
-              className="mt-2"
-            >
-              <option value="no">Disposable</option>
-              <option value="yes">Reusable</option>
-            </Select>
-          </label>
-          <label className="text-sm text-slate-300 md:col-span-2">
-            Storage note
-            <Input
-              value={draft.storageNote}
-              onChange={(event) => setDraft({ ...draft, storageNote: event.target.value })}
-              className="mt-2"
-              placeholder="Store with winter decor"
-            />
-          </label>
-        </div>
-        <Button type="button" onClick={addItem} className="mt-4">
-          Add decor
-        </Button>
-      </Card>
-
-      <Card>
-        <CardTitle>Decor list</CardTitle>
-        <div className="mt-2 flex items-center justify-between">
-          <p className="text-sm text-slate-400">Track decor by zone with status.</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const lines = state.decor.items.map(
-                (i) => `${i.name} | ${i.zone.replace('_', ' ')} | qty ${i.quantity} | ${i.status}`,
-              )
-              const content = ['Decor List', '================', '', ...lines].join('\n')
-              const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-              const url = URL.createObjectURL(blob)
-              const link = document.createElement('a')
-              link.href = url
-              link.download = 'decor-list.txt'
-              link.click()
-              URL.revokeObjectURL(url)
-            }}
-            disabled={state.decor.items.length === 0}
-          >
-            <Download className="mr-1 size-3" /> Export
-          </Button>
-        </div>
-        {state.decor.items.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No decor yet.</p>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {state.decor.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-semibold text-white">{item.name}</p>
-                  <p className="text-xs uppercase text-slate-400">
-                    {item.zone.replace('_', ' ')} · qty {item.quantity} · {item.status}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => setConfirmingRemove({ id: item.id, name: item.name })}
-                  variant="outline"
-                  className="px-3 py-1 text-xs"
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-      <ConfirmDialog
-        open={!!confirmingRemove}
-        onClose={() => setConfirmingRemove(null)}
-        onConfirm={() => { if (confirmingRemove) removeItem(confirmingRemove.id) }}
-        title="Remove decor item"
-        description={
-          confirmingRemove
-            ? `Remove "${confirmingRemove.name}"? This cannot be undone.`
-            : ''
-        }
-      />
-    </div>
-  )
-}
-
-export function CleaningPage() {
-  const { state, dispatch } = useParty()
-  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; name: string } | null>(null)
-  const [extraName, setExtraName] = useState('')
-  const [extraQty, setExtraQty] = useState(1)
-  const bathroomExtras = state.cleaning.bathroomExtras ?? []
-
-  const toggleBathroomSupply = (id: string) => {
-    dispatch({
-      type: 'update_cleaning',
-      payload: {
-        bathroomSupplies: state.cleaning.bathroomSupplies.map((item) =>
-          item.id === id
-            ? { ...item, status: item.status === 'done' ? 'not_started' : 'done' }
-            : item,
-        ),
-      },
-    })
-  }
-
-  const addBathroomExtra = () => {
-    if (!extraName.trim()) return
-    dispatch({
-      type: 'update_cleaning',
-      payload: {
-        bathroomExtras: [
-          ...bathroomExtras,
-          { id: uuid(), name: extraName.trim(), quantity: extraQty, status: 'not_started' as const },
-        ],
-      },
-    })
-    setExtraName('')
-    setExtraQty(1)
-  }
-
-  const toggleBathroomExtra = (id: string) => {
-    dispatch({
-      type: 'update_cleaning',
-      payload: {
-        bathroomExtras: bathroomExtras.map((item) =>
-          item.id === id
-            ? { ...item, status: item.status === 'done' ? 'not_started' : 'done' }
-            : item,
-        ),
-      },
-    })
-  }
-
-  const removeBathroomExtra = (id: string) => {
-    dispatch({
-      type: 'update_cleaning',
-      payload: { bathroomExtras: bathroomExtras.filter((i) => i.id !== id) },
-    })
-  }
-
-  return (
-    <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-2xl font-semibold text-white">Cleaning & Bathroom</h3>
-      <p className="text-sm text-slate-300">Bathroom essentials checklist. Add more items below if needed.</p>
-
-      <Card>
-        <CardTitle>Bathroom essentials</CardTitle>
-        <div className="mt-4 space-y-2">
-          {state.cleaning.bathroomSupplies.map((item) => (
-            <label
-              key={item.id}
-              className={cn(
-                'flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors',
-                item.status === 'done'
-                  ? 'bg-emerald-500/20 text-emerald-200'
-                  : 'bg-white/5 text-slate-300 hover:bg-white/10',
-              )}
-            >
-              <input
-                type="checkbox"
-                checked={item.status === 'done'}
-                onChange={() => toggleBathroomSupply(item.id)}
-                className="size-4 shrink-0 rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-emerald-500/50"
-                aria-label={item.name}
-              />
-              <span className={cn(item.status === 'done' && 'line-through opacity-80')}>
-                {item.name}
-              </span>
-            </label>
-          ))}
-        </div>
-          {bathroomExtras.length > 0 && (
-            <div className="mt-4 border-t border-white/10 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Additional items</p>
-              <div className="space-y-2">
-                {bathroomExtras.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-2"
-                  >
-                    <label
-                      className={cn(
-                        'flex flex-1 cursor-pointer items-center gap-3 text-sm',
-                        item.status === 'done' && 'text-emerald-300 line-through opacity-80',
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={item.status === 'done'}
-                        onChange={() => toggleBathroomExtra(item.id)}
-                        className="size-4 shrink-0 rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-emerald-500/50"
-                        aria-label={`${item.name} quantity ${item.quantity}`}
-                      />
-                      {item.name} × {item.quantity}
-                    </label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0 text-slate-400 hover:text-rose-400"
-                      onClick={() => setConfirmingRemove({ id: item.id, name: item.name })}
-                      aria-label={`Remove ${item.name}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="mt-4 flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 p-4">
-            <label className="text-sm text-slate-300">
-              Item
-              <Input
-                value={extraName}
-                onChange={(e) => setExtraName(e.target.value)}
-                className="mt-1"
-                placeholder="e.g. Paper towels"
-              />
-            </label>
-            <label className="text-sm text-slate-300">
-              Qty
-              <Input
-                type="number"
-                min={1}
-                value={extraQty}
-                onChange={(e) => setExtraQty(Number(e.target.value) || 1)}
-                className="mt-1 w-20"
-              />
-            </label>
-            <Button type="button" size="sm" onClick={addBathroomExtra} disabled={!extraName.trim()}>
-              Add to checklist
-            </Button>
-          </div>
-      </Card>
-      <ConfirmDialog
-        open={!!confirmingRemove}
-        onClose={() => setConfirmingRemove(null)}
-        onConfirm={() => { if (confirmingRemove) removeBathroomExtra(confirmingRemove.id) }}
-        title="Remove item"
-        description={
-          confirmingRemove
-            ? `Remove "${confirmingRemove.name}" from checklist? This cannot be undone.`
-            : ''
-        }
-      />
-    </div>
-  )
-}
-
-function exportTaskAsIcs(
-  task: { id: string; title: string; offsetHours: number; status: string },
-  baseDate: Date,
-  filename: string,
-) {
-  const start = new Date(baseDate.getTime() + task.offsetHours * 60 * 60 * 1000)
-  const iso = start.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  const content = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'BEGIN:VEVENT',
-    `UID:${task.id}`,
-    `DTSTAMP:${iso}`,
-    `DTSTART:${iso}`,
-    `SUMMARY:${task.title}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].join('\n')
-  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
-export function TimelinePage() {
-  const { state, dispatch } = useParty()
-  const [confirmingRemove, setConfirmingRemove] = useState<{ id: string; title: string } | null>(null)
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-  const [draft, setDraft] = useState({
-    title: '',
-    offsetHours: -24,
-  })
-
-  const isPartyScope = selectedEventId === null || selectedEventId === '__party__'
-  const referenceDate = isPartyScope && state.core.date
-    ? parseISO(state.core.date)
-    : state.events.items.find((e) => e.id === selectedEventId)?.date
-      ? parseISO(state.events.items.find((e) => e.id === selectedEventId)!.date)
-      : null
-  const currentTasks = isPartyScope
-    ? state.timeline.tasks
-    : (state.events.items.find((e) => e.id === selectedEventId)?.tasks ?? [])
-
-  const addTask = () => {
-    if (!draft.title.trim()) return
-    const newTask = {
-      id: uuid(),
-      title: draft.title.trim(),
-      offsetHours: Number(draft.offsetHours),
-      status: 'not_started' as const,
-    }
-    if (isPartyScope) {
-      dispatch({
-        type: 'update_timeline',
-        payload: { tasks: [...state.timeline.tasks, newTask] },
-      })
-    } else {
-      const ev = state.events.items.find((e) => e.id === selectedEventId)
-      if (!ev) return
-      const nextTasks = [...(ev.tasks ?? []), newTask]
-      dispatch({
-        type: 'update_events',
-        payload: {
-          items: state.events.items.map((e) =>
-            e.id === selectedEventId ? { ...e, tasks: nextTasks } : e,
-          ),
-        },
-      })
-    }
-    setDraft({ title: '', offsetHours: -24 })
-  }
-
-  const removeTask = (id: string) => {
-    if (isPartyScope) {
-      dispatch({
-        type: 'update_timeline',
-        payload: { tasks: state.timeline.tasks.filter((task) => task.id !== id) },
-      })
-    } else {
-      dispatch({
-        type: 'update_events',
-        payload: {
-          items: state.events.items.map((e) =>
-            e.id === selectedEventId
-              ? { ...e, tasks: (e.tasks ?? []).filter((t) => t.id !== id) }
-              : e,
-          ),
-        },
-      })
-    }
-  }
-
-  const exportCalendar = () => {
-    if (!state.core.date) return
-    const partyStart = new Date(state.core.date)
-    const events = state.timeline.tasks.map((task) => {
-      const start = new Date(partyStart.getTime() + task.offsetHours * 60 * 60 * 1000)
-      const iso = start.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-      return [
-        'BEGIN:VEVENT',
-        `UID:${task.id}`,
-        `DTSTAMP:${iso}`,
-        `DTSTART:${iso}`,
-        `SUMMARY:${task.title}`,
-        'END:VEVENT',
-      ].join('\n')
-    })
-
-    const content = ['BEGIN:VCALENDAR', 'VERSION:2.0', ...events, 'END:VCALENDAR'].join('\n')
-    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'party-timeline.ics'
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
-  /** Use event-scoped date when an event is selected (multi-event support) */
-  const referencePartyDate = referenceDate ?? (state.core.date ? parseISO(state.core.date) : null)
-  const isValidPartyDate = referencePartyDate && !isNaN(referencePartyDate.getTime())
-  const today = startOfDay(new Date())
-  const daysToEvent = isValidPartyDate
-    ? differenceInDays(startOfDay(referencePartyDate), today)
-    : null
-  const isEventUpcoming = daysToEvent !== null && daysToEvent >= 0
-
-  const [calendarMonth, setCalendarMonth] = useState(() =>
-    isValidPartyDate ? startOfMonth(referencePartyDate) : startOfMonth(new Date()),
-  )
-  const monthStart = startOfMonth(calendarMonth)
-  const monthEnd = endOfMonth(calendarMonth)
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
-  const firstDayOffset = monthStart.getDay()
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-  const allTasksForCalendar = [
-    ...state.timeline.tasks.map((t) => ({ ...t, eventName: state.core.name, date: state.core.date })),
-    ...state.events.items.flatMap((ev) =>
-      (ev.tasks ?? []).map((t) => ({ ...t, eventName: ev.name, date: ev.date })),
-    ),
-  ]
-  const remainingTasks = allTasksForCalendar.filter((t) => t.status !== 'done')
-  const tasksByDay = remainingTasks.reduce<Record<string, typeof remainingTasks>>((acc, t) => {
-    if (!t.date) return acc
-    const d = parseISO(t.date)
-    if (isNaN(d.getTime())) return acc
-    const dayStart = startOfDay(new Date(d.getTime() + t.offsetHours * 60 * 60 * 1000))
-    const key = format(dayStart, 'yyyy-MM-dd')
-    if (!acc[key]) acc[key] = []
-    acc[key].push(t)
-    return acc
-  }, {})
-
-  return (
-    <div className="space-y-6 pb-20 md:pb-0">
-      <h3 className="text-2xl font-semibold text-white">Timeline</h3>
-      <p className="text-sm text-slate-300">Tasks relative to party or event start. Each task is exportable.</p>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-slate-400">Tasks for:</span>
-        <Select
-          value={selectedEventId ?? '__party__'}
-          onChange={(e) => setSelectedEventId(e.target.value === '__party__' ? null : e.target.value)}
-          className="w-48"
-        >
-          <option value="__party__">Main party</option>
-          {state.events.items.map((ev) => (
-            <option key={ev.id} value={ev.id}>{ev.name || 'Unnamed event'}</option>
-          ))}
-        </Select>
-      </div>
-
-      <Card>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="size-5 text-emerald-400" />
-          Days to event
-        </CardTitle>
-        <div className="mt-4 flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
-          {isValidPartyDate && (
-            <div className="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-emerald-500/10 px-8 py-6 ring-1 ring-emerald-500/20">
-              {isEventUpcoming ? (
-                <>
-                  <span className="text-5xl font-bold tabular-nums text-emerald-400">
-                    {daysToEvent}
-                  </span>
-                  <span className="mt-1 text-sm font-semibold uppercase tracking-wider text-slate-400">
-                    {daysToEvent === 0
-                      ? "Today's the day!"
-                      : daysToEvent === 1
-                        ? 'day to go'
-                        : 'days to go'}
-                  </span>
-                </>
-              ) : (
-                <span className="text-lg font-semibold text-slate-400">Event passed</span>
-              )}
-              <span className="mt-2 text-xs text-slate-500">
-                {format(referencePartyDate, 'EEEE, MMM d, yyyy')}
-              </span>
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="mb-3 flex items-center justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 px-2"
-                onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
-                aria-label="Previous month"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <span className="text-sm font-semibold text-white">
-                {format(calendarMonth, 'MMMM yyyy')}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 px-2"
-                onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
-                aria-label="Next month"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl bg-white/5">
-              {weekDays.map((d) => (
-                <div
-                  key={d}
-                  className="py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-500"
-                >
-                  {d}
-                </div>
-              ))}
-              {Array.from({ length: firstDayOffset }).map((_, i) => (
-                <div key={`pad-${i}`} className="aspect-square" />
-              ))}
-              {days.map((day) => {
-                const isPartyDay = Boolean(isValidPartyDate && isSameDay(day, referencePartyDate))
-                const isEventDay = state.events.items.some((e) => {
-                  if (!e.date) return false
-                  const ed = parseISO(e.date)
-                  return !isNaN(ed.getTime()) && isSameDay(day, startOfDay(ed))
-                })
-                const isToday = isSameDay(day, today)
-                const isPast = isBefore(day, today) && !isSameDay(day, today)
-                const dayKey = format(day, 'yyyy-MM-dd')
-                const dayTasks = tasksByDay[dayKey] ?? []
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={cn(
-                      'flex aspect-square flex-col items-center justify-center gap-0.5 text-xs font-medium transition',
-                      !isSameMonth(day, calendarMonth) && 'text-slate-600',
-                      isPartyDay && 'rounded-lg bg-emerald-500 text-white ring-2 ring-emerald-400/50',
-                      isEventDay && !isPartyDay && 'rounded-lg bg-emerald-500/30 ring-1 ring-emerald-400/30',
-                      isToday && !isPartyDay && !isEventDay && 'rounded-lg ring-1 ring-slate-500 text-slate-200',
-                      isPast && !isPartyDay && !isEventDay && 'text-slate-600 opacity-60',
-                    )}
-                  >
-                    <span>{format(day, 'd')}</span>
-                    {dayTasks.length > 0 && (
-                      <span className="rounded bg-black/30 px-1 text-[10px]" title={dayTasks.map((t) => t.title).join(', ')}>
-                        {dayTasks.length}
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            {!state.core.date && (
-              <p className="mt-3 text-xs text-slate-500">
-                Set your party date in the dashboard to see the countdown.
-              </p>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <CardTitle>Add timeline task</CardTitle>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <label className="text-sm text-slate-300 md:col-span-2">
-            Task title
-            <Input
-              value={draft.title}
-              onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-              className="mt-2"
-              placeholder="Order ice and mixers"
-            />
-          </label>
-          <label className="text-sm text-slate-300">
-            Hours from start
-            <Input
-              type="number"
-              value={draft.offsetHours}
-              onChange={(event) =>
-                setDraft({ ...draft, offsetHours: Number(event.target.value) })
-              }
-              className="mt-2"
-            />
-          </label>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" onClick={addTask}>
-            Add task
-          </Button>
-          <Button
-            type="button"
-            onClick={exportCalendar}
-            disabled={!state.core.date}
-            variant="outline"
-          >
-            Export calendar
-          </Button>
-        </div>
-      </Card>
-
-      <Card>
-        <CardTitle>Remaining activities (calendar)</CardTitle>
-        <p className="mt-2 text-sm text-slate-400">
-          Tasks not yet done, across all events. Export any task to add to your calendar.
-        </p>
-        {remainingTasks.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No remaining tasks. Add tasks below or mark completed ones done.</p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {remainingTasks.map((task) => {
-              const baseDate = task.date ? parseISO(task.date) : null
-              const isValid = baseDate && !isNaN(baseDate.getTime())
-              return (
-                <div
-                  key={`${task.eventName}-${task.id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-2 text-sm"
-                >
-                  <div>
-                    <p className="font-semibold text-white">{task.title}</p>
-                    <p className="text-xs text-slate-400">{task.eventName} · {task.offsetHours}h from start</p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="px-2 py-1 text-xs"
-                    onClick={() => isValid && exportTaskAsIcs(task, baseDate!, `task-${task.title.replace(/\s+/g, '-')}.ics`)}
-                    disabled={!isValid}
-                  >
-                    <Download className="mr-1 size-3" /> Export
-                  </Button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <CardTitle>Timeline tasks{!isPartyScope ? ` (${state.events.items.find((e) => e.id === selectedEventId)?.name || 'Event'})` : ''}</CardTitle>
-        {currentTasks.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-400">No tasks yet. Add tasks above.</p>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {currentTasks.map((task) => {
-              const baseDate = referenceDate && !isNaN(referenceDate.getTime()) ? referenceDate : new Date()
-              return (
-                <div
-                  key={task.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm"
-                >
-                  <div>
-                    <p className="font-semibold text-white">{task.title}</p>
-                    <p className="text-xs uppercase text-slate-400">
-                      {task.offsetHours}h from start
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="px-2 py-1 text-xs"
-                      onClick={() => exportTaskAsIcs(task, baseDate, `task-${task.title.replace(/\s+/g, '-')}.ics`)}
-                    >
-                      <Download className="mr-1 size-3" /> Export
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => setConfirmingRemove({ id: task.id, title: task.title })}
-                      variant="outline"
-                      className="px-3 py-1 text-xs"
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
-      <ConfirmDialog
-        open={!!confirmingRemove}
-        onClose={() => setConfirmingRemove(null)}
-        onConfirm={() => { if (confirmingRemove) removeTask(confirmingRemove.id) }}
-        title="Remove task"
-        description={
-          confirmingRemove
-            ? `Remove "${confirmingRemove.title}"? This cannot be undone.`
-            : ''
-        }
-      />
-    </div>
-  )
-}
-
+export { TimelinePage } from './modules/TimelinePage'
 export function MusicPage() {
   const { state, dispatch } = useParty()
+  const [spotifyModalOpen, setSpotifyModalOpen] = useState(false)
+  const [spotifyModalTarget, setSpotifyModalTarget] = useState<SpotifyTarget>('mainLink')
+
+  const activeSpotifyUrl =
+    (state.music.mainLink && isSpotifyUrl(state.music.mainLink) ? state.music.mainLink : null) ||
+    Object.values(state.music.playlists).find((url) => url && isSpotifyUrl(url)) ||
+    null
+  const embedUrl = activeSpotifyUrl ? spotifyUrlToEmbed(activeSpotifyUrl) : null
+
+  const openSpotifyModal = (target: SpotifyTarget) => {
+    setSpotifyModalTarget(target)
+    setSpotifyModalOpen(true)
+  }
+
+  const handleSpotifySave = (url: string, target: SpotifyTarget) => {
+    if (target === 'mainLink') {
+      dispatch({ type: 'update_music', payload: { mainLink: url } })
+    } else {
+      dispatch({
+        type: 'update_music',
+        payload: {
+          playlists: { ...state.music.playlists, [target]: url },
+        },
+      })
+    }
+  }
+
+  const getUrlForTarget = (target: SpotifyTarget): string =>
+    target === 'mainLink' ? state.music.mainLink : state.music.playlists[target]
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <h3 className="text-2xl font-semibold text-white">Music Hub</h3>
@@ -2664,7 +1618,13 @@ export function MusicPage() {
             <p className="text-lg font-bold text-white">Sonic Atmosphere</p>
             <p className="text-sm text-slate-400">Current Phase: {state.core.theme || 'Vibing'}</p>
             <div className="mt-4 flex items-center gap-4">
-              <Button size="sm" variant="outline" className="rounded-xl border-white/5 bg-white/5">
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-xl border-white/5 bg-white/5"
+                onClick={() => openSpotifyModal('mainLink')}
+              >
+                <Music2 className="size-3.5" />
                 Spotify Hub
               </Button>
               <div className="h-1 flex-1 rounded-full bg-white/5 overflow-hidden">
@@ -2678,18 +1638,49 @@ export function MusicPage() {
         </div>
       </Card>
 
+      {embedUrl && (
+        <Card>
+          <CardTitle className="flex items-center gap-2">
+            <Music2 className="size-4" />
+            Spotify Player
+          </CardTitle>
+          <div className="mt-4 rounded-xl overflow-hidden bg-black/40">
+            <iframe
+              src={embedUrl}
+              title="Spotify embed"
+              width="100%"
+              height="352"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-xl border-0"
+            />
+          </div>
+        </Card>
+      )}
+
       <Card>
         <CardTitle>Master Playlist Link</CardTitle>
         <div className="mt-4 space-y-4">
-          <Input
-            value={state.music.mainLink}
-            onChange={(event) =>
-              dispatch({ type: 'update_music', payload: { mainLink: event.target.value } })
-            }
-            placeholder="https://open.spotify.com/..."
-          />
+          <div className="flex gap-2">
+            <Input
+              value={state.music.mainLink}
+              onChange={(event) =>
+                dispatch({ type: 'update_music', payload: { mainLink: event.target.value } })
+              }
+              placeholder="https://open.spotify.com/..."
+              className="flex-1"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openSpotifyModal('mainLink')}
+              title="Add via Spotify Hub"
+            >
+              Add
+            </Button>
+          </div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-            Link your master event playlist for one-tap access.
+            Link your master event playlist for one-tap access. Paste a Spotify playlist or track URL.
           </p>
         </div>
       </Card>
@@ -2700,23 +1691,41 @@ export function MusicPage() {
           {(['pregame', 'arrival', 'peak', 'late', 'windDown'] as const).map((phase) => (
             <label key={phase} className="text-sm text-slate-300">
               {phase}
-              <Input
-                value={state.music.playlists[phase]}
-                onChange={(event) =>
-                  dispatch({
-                    type: 'update_music',
-                    payload: {
-                      playlists: { ...state.music.playlists, [phase]: event.target.value },
-                    },
-                  })
-                }
-                className="mt-2"
-                placeholder="https://open.spotify.com/..."
-              />
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={state.music.playlists[phase]}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'update_music',
+                      payload: {
+                        playlists: { ...state.music.playlists, [phase]: event.target.value },
+                      },
+                    })
+                  }
+                  className="flex-1"
+                  placeholder="https://open.spotify.com/..."
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openSpotifyModal(phase)}
+                  title="Add via Spotify Hub"
+                >
+                  Add
+                </Button>
+              </div>
             </label>
           ))}
         </div>
       </Card>
+
+      <SpotifyEmbedModal
+        open={spotifyModalOpen}
+        onClose={() => setSpotifyModalOpen(false)}
+        onSave={handleSpotifySave}
+        initialUrl={getUrlForTarget(spotifyModalTarget)}
+        target={spotifyModalTarget}
+      />
     </div>
   )
 }
@@ -3344,8 +2353,16 @@ type PhotoVideoConfirming =
   | { type: 'equipment'; item: string }
   | null
 
+/** Resolve display URL for a gallery photo (Storage URL or legacy dataUrl) */
+function getPhotoDisplayUrl(photo: GalleryPhoto): string {
+  if (photo.url) return photo.url
+  if (photo.storagePath) return getPhotoPublicUrl(photo.storagePath)
+  if (photo.dataUrl) return photo.dataUrl
+  return ''
+}
+
 export function PhotoVideoPage() {
-  const { state, dispatch } = useParty()
+  const { state, dispatch, currentPartyId } = useParty()
   const [confirmingRemove, setConfirmingRemove] = useState<PhotoVideoConfirming>(null)
   const [draft, setDraft] = useState({
     title: '',
@@ -3418,6 +2435,52 @@ export function PhotoVideoPage() {
     })
   }
 
+  const canUseStorage =
+    !!currentPartyId &&
+    !isLocalParty(currentPartyId) &&
+    !!state.auth.user &&
+    AuthService.isConfigured()
+
+  // Migrate legacy base64 photos to Supabase Storage when possible
+  const hasMigratedRef = useRef(false)
+  useEffect(() => {
+    if (!canUseStorage || !currentPartyId || hasMigratedRef.current) return
+    const currentPhotos = state.photoVideo.photos
+    const toMigrate = currentPhotos.filter((p) => p.dataUrl && !p.url)
+    if (toMigrate.length === 0) return
+    hasMigratedRef.current = true
+    ;(async () => {
+      const updates = new Map<string, GalleryPhoto>()
+      for (const photo of toMigrate) {
+        if (!photo.dataUrl) continue
+        try {
+          const blob = await (await fetch(photo.dataUrl)).blob()
+          const { storagePath, url } = await uploadPartyPhoto(
+            currentPartyId,
+            photo.id,
+            blob,
+            photo.filename || 'image.jpg',
+          )
+          updates.set(photo.id, {
+            ...photo,
+            storagePath,
+            url,
+            dataUrl: undefined,
+          })
+        } catch {
+          // Keep dataUrl on failure; no update
+        }
+      }
+      if (updates.size > 0) {
+        const nextPhotos = currentPhotos.map((p) => updates.get(p.id) ?? p)
+        dispatch({
+          type: 'update_photo_video',
+          payload: { photos: nextPhotos },
+        })
+      }
+    })()
+  }, [canUseStorage, currentPartyId, state.photoVideo.photos, dispatch])
+
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files?.length) return
@@ -3432,13 +2495,46 @@ export function PhotoVideoPage() {
         reader.readAsDataURL(file)
       })
       const resized = await resizeDataUrl(dataUrl, MAX_IMAGE_DIM)
-      newPhotos.push({
-        id: uuid(),
-        dataUrl: resized,
-        caption: file.name.replace(/\.[^.]+$/, ''),
-        addedAt: new Date().toISOString(),
-        filename: file.name,
-      })
+      const photoId = uuid()
+      const caption = file.name.replace(/\.[^.]+$/, '')
+      const addedAt = new Date().toISOString()
+
+      if (canUseStorage) {
+        try {
+          const blob = await (await fetch(resized)).blob()
+          const { storagePath, url } = await uploadPartyPhoto(
+            currentPartyId,
+            photoId,
+            blob,
+            file.name,
+          )
+          newPhotos.push({
+            id: photoId,
+            storagePath,
+            url,
+            caption,
+            addedAt,
+            filename: file.name,
+          })
+        } catch (err) {
+          console.warn('Storage upload failed, falling back to base64:', err)
+          newPhotos.push({
+            id: photoId,
+            dataUrl: resized,
+            caption,
+            addedAt,
+            filename: file.name,
+          })
+        }
+      } else {
+        newPhotos.push({
+          id: photoId,
+          dataUrl: resized,
+          caption,
+          addedAt,
+          filename: file.name,
+        })
+      }
     }
     if (newPhotos.length > 0) {
       dispatch({
@@ -3451,10 +2547,26 @@ export function PhotoVideoPage() {
     event.target.value = ''
   }
 
-  const downloadPhoto = (photo: GalleryPhoto) => {
-    const base64 = photo.dataUrl.split(',')[1]
+  const downloadPhoto = async (photo: GalleryPhoto) => {
+    const downloadName = photo.caption ? `${photo.caption}.jpg` : photo.filename
+    if (photo.url) {
+      try {
+        const res = await fetch(photo.url)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = downloadName
+        link.click()
+        URL.revokeObjectURL(url)
+      } catch {
+        window.open(photo.url, '_blank')
+      }
+      return
+    }
+    const base64 = photo.dataUrl?.split(',')[1]
     if (!base64) return
-    const mime = photo.dataUrl.match(/data:([^;]+);/)?.[1] ?? 'image/jpeg'
+    const mime = photo.dataUrl!.match(/data:([^;]+);/)?.[1] ?? 'image/jpeg'
     const binary = atob(base64)
     const bytes = new Uint8Array(binary.length)
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
@@ -3462,12 +2574,18 @@ export function PhotoVideoPage() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = photo.caption ? `${photo.caption}.jpg` : photo.filename
+    link.download = downloadName
     link.click()
     URL.revokeObjectURL(url)
   }
 
   const removePhoto = (id: string) => {
+    const photo = state.photoVideo.photos.find((p) => p.id === id)
+    if (photo?.storagePath && canUseStorage) {
+      deletePartyPhoto(photo.storagePath).catch((err) =>
+        console.warn('Failed to delete photo from storage:', err),
+      )
+    }
     dispatch({
       type: 'update_photo_video',
       payload: {
@@ -3607,7 +2725,10 @@ export function PhotoVideoPage() {
       <Card>
         <CardTitle>Photo Gallery</CardTitle>
         <p className="mt-2 text-sm text-slate-400">
-          Upload party photos. Images are resized to save space. Stored locally in your browser.
+          Upload party photos. Images are resized to save space.
+          {canUseStorage
+            ? ' Stored in the cloud and synced across devices.'
+            : ' Stored locally in your browser.'}
         </p>
         <input
           ref={fileInputRef}
@@ -3637,7 +2758,7 @@ export function PhotoVideoPage() {
               >
                 <div className="aspect-square overflow-hidden">
                   <img
-                    src={photo.dataUrl}
+                    src={getPhotoDisplayUrl(photo)}
                     alt={photo.caption || 'Party photo'}
                     className="h-full w-full object-cover"
                   />

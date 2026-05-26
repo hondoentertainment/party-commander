@@ -10,12 +10,12 @@ const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <PartyProvider>
-      <ToastProvider>
+    <ToastProvider>
+      <PartyProvider>
         <BrowserRouter basename={basename}>
           <App />
         </BrowserRouter>
-      </ToastProvider>
-    </PartyProvider>
+      </PartyProvider>
+    </ToastProvider>
   </StrictMode>,
 )
