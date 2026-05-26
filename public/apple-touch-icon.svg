@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="crown" x1="36" y1="42" x2="144" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="50%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="80" y1="70" x2="102" y2="134" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background for Apple touch icon (no rounded corners — iOS crops) -->
+  <rect width="180" height="180" fill="url(#bg)"/>
+
+  <!-- Crown -->
+  <path d="M 38 120 L 49 56 L 69 84 L 90 46 L 111 84 L 131 56 L 142 120 Z" fill="url(#crown)" opacity="0.95"/>
+  <rect x="38" y="116" width="104" height="14" rx="3" fill="url(#crown)" opacity="0.85"/>
+
+  <!-- Crown jewels -->
+  <circle cx="68" cy="102" r="4.2" fill="#fbbf24" opacity="0.9"/>
+  <circle cx="90" cy="92" r="5" fill="#fbbf24" opacity="0.95"/>
+  <circle cx="112" cy="102" r="4.2" fill="#fbbf24" opacity="0.9"/>
+
+  <!-- Lightning bolt -->
+  <path d="M 96 62 L 84 95 L 94 95 L 84 130 L 105 90 L 94 90 Z" fill="url(#bolt)" opacity="0.95"/>
+</svg>

@@ -5,7 +5,7 @@ export const hasGeminiKey = !!API_KEY
 const genAI = new GoogleGenerativeAI(API_KEY)
 export const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
-export async function generateBudgetOptimization(items: any[], limit?: number) {
+export async function generateBudgetOptimization(items: { label: string; amount: number; category?: string }[], limit?: number) {
     if (!API_KEY) {
         console.warn('VITE_GEMINI_API_KEY is not defined. AI features will be disabled.')
         return ['AI Optimization is currently unavailable. Please check your VITE_GEMINI_API_KEY in the environment.']

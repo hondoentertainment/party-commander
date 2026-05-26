@@ -144,11 +144,16 @@ export const defaultPartyState: PartyState = {
       lastChecked: '',
       noGrillFallback: false,
     },
+    parkingNotes: '',
+    noiseRestrictions: '',
+    weatherPlan: '',
+    accessHours: '',
   },
   entry: {
     instructions: '',
     butterflyLink: '',
     arrivalTexts: ['Buzz in when you arrive', 'Text me when you are downstairs'],
+    guestCheckin: [],
   },
   live: {
     restockAlerts: {
@@ -156,8 +161,11 @@ export const defaultPartyState: PartyState = {
       cups: false,
       mixers: false,
       trash: false,
+      napkins: false,
+      bathroom: false,
     },
     quickNotes: [],
+    guestEstimate: 0,
   },
   postParty: {
     cleanupChecklist: [],
@@ -167,6 +175,10 @@ export const defaultPartyState: PartyState = {
       drinks: [],
       games: [],
       playlists: [],
+    },
+    feedback: {
+      whatWorked: [],
+      whatDidnt: [],
     },
   },
   photoVideo: {

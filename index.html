@@ -2,17 +2,118 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Viewport & Theme -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#020617" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Party Cmd" />
+
+    <!-- SEO -->
     <title>Party Commander — Plan, Run, Wrap</title>
-    <meta name="description" content="Party Command Center: orchestrate invites, menus, drinks, decor, timeline, music, and more." />
+    <meta name="description" content="The ultimate party command center. Orchestrate invites, menus, drinks, decor, timeline, music, budgets, and more — all in one place." />
+    <meta name="keywords" content="party planner, event planner, party organizer, party tracker, event management" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Party Commander — Plan, Run, Wrap" />
+    <meta property="og:description" content="The ultimate party command center. Orchestrate invites, menus, drinks, decor, timeline, music, budgets, and more." />
+    <meta property="og:image" content="/logo.svg" />
+    <meta property="og:site_name" content="Party Commander" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Party Commander — Plan, Run, Wrap" />
+    <meta name="twitter:description" content="The ultimate party command center. Orchestrate invites, menus, drinks, decor, timeline, music, budgets, and more." />
+    <meta name="twitter:image" content="/logo.svg" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- Inline critical styles for splash screen -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        background: linear-gradient(135deg, #064e3b 0%, #0f172a 60%, #020617 100%);
+        transition: opacity 0.4s ease-out;
+      }
+      #splash.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #splash svg {
+        width: 80px;
+        height: 80px;
+        animation: splash-pulse 2s ease-in-out infinite;
+      }
+      #splash .splash-text {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        color: #f8fafc;
+        letter-spacing: -0.01em;
+      }
+      #splash .splash-sub {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        color: #34d399;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.85; }
+      }
+    </style>
   </head>
   <body>
+    <!-- Splash screen (removed by React after mount) -->
+    <div id="splash" aria-hidden="true">
+      <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sBg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#064e3b"/>
+            <stop offset="100%" stop-color="#0f172a"/>
+          </linearGradient>
+          <linearGradient id="sCr" x1="128" y1="120" x2="384" y2="340" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#34d399"/>
+            <stop offset="50%" stop-color="#10b981"/>
+            <stop offset="100%" stop-color="#059669"/>
+          </linearGradient>
+          <linearGradient id="sBo" x1="230" y1="200" x2="290" y2="380" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#fbbf24"/>
+            <stop offset="100%" stop-color="#f59e0b"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="112" fill="url(#sBg)"/>
+        <rect x="4" y="4" width="504" height="504" rx="108" fill="none" stroke="rgba(16,185,129,0.15)" stroke-width="2"/>
+        <path d="M 108 340 L 140 160 L 196 240 L 256 130 L 316 240 L 372 160 L 404 340 Z" fill="url(#sCr)" opacity="0.95"/>
+        <rect x="108" y="328" width="296" height="40" rx="8" fill="url(#sCr)" opacity="0.85"/>
+        <circle cx="192" cy="290" r="12" fill="#fbbf24" opacity="0.9"/>
+        <circle cx="256" cy="260" r="14" fill="#fbbf24" opacity="0.95"/>
+        <circle cx="320" cy="290" r="12" fill="#fbbf24" opacity="0.9"/>
+        <path d="M 272 175 L 238 270 L 268 270 L 240 370 L 300 255 L 268 255 Z" fill="url(#sBo)" opacity="0.95"/>
+      </svg>
+      <span class="splash-text">Party Commander</span>
+      <span class="splash-sub">Command Center</span>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
