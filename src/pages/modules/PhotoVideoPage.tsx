@@ -156,6 +156,7 @@ export function PhotoVideoPage() {
   }
 
   const downloadPhoto = (photo: GalleryPhoto) => {
+    if (!photo.dataUrl) return
     const base64 = photo.dataUrl.split(',')[1]
     if (!base64) return
     const mime = photo.dataUrl.match(/data:([^;]+);/)?.[1] ?? 'image/jpeg'
