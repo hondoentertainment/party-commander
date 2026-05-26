@@ -15,10 +15,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        strategies: 'injectManifest',
         injectRegister: 'auto',
-        srcDir: 'src',
-        filename: 'sw.ts',
         manifest: {
           name: 'Party Command Center',
           short_name: 'Party Commander',
