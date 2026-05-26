@@ -22,15 +22,15 @@ describe('GamesPage', () => {
 
   it('shows add game form', () => {
     render(<GamesPageWithProviders />)
-    expect(screen.getByPlaceholder(/two truths and a lie/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/two truths and a lie/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add game/i })).toBeInTheDocument()
   })
 
   it('allows adding a game', () => {
     render(<GamesPageWithProviders />)
-    const nameInput = screen.getByPlaceholder(/two truths and a lie/i)
+    const nameInput = screen.getByPlaceholderText(/two truths and a lie/i)
     fireEvent.change(nameInput, { target: { value: 'Charades' } })
     fireEvent.click(screen.getByRole('button', { name: /add game/i }))
-    expect(screen.getByDisplayValue('Charades')).toBeInTheDocument()
+    expect(screen.getByText('Charades')).toBeInTheDocument()
   })
 })

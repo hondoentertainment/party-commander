@@ -28,7 +28,7 @@ describe('LeadsPage', () => {
 
   it('allows adding a lead assignment', () => {
     render(<LeadsPageWithProviders />)
-    const leadInput = screen.getAllByPlaceholder(/lead name/i)[0]
+    const leadInput = screen.getAllByPlaceholderText(/lead name/i)[0]
     fireEvent.change(leadInput, { target: { value: 'Alice' } })
     expect(screen.getByDisplayValue('Alice')).toBeInTheDocument()
   })
